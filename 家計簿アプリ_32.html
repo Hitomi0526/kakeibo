@@ -1,0 +1,3305 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🏕️ トオル＆ひとみ 家計簿</title>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700;900&family=M+PLUS+Rounded+1c:wght@400;700;900&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --sun: #FFB800;
+    --sky: #4FC3F7;
+    --forest: #43A047;
+    --flame: #FF6B35;
+    --berry: #E91E8C;
+    --earth: #8D6E63;
+    --snow: #F0F4F8;
+    --white: #FFFFFF;
+    --ink: #1A1A2E;
+    --muted: #6B7280;
+    --card-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    --radius: 18px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Zen Maru Gothic', sans-serif;
+    background: linear-gradient(135deg, #FFF8E1 0%, #E8F5E9 50%, #E3F2FD 100%);
+    min-height: 100vh;
+    color: var(--ink);
+  }
+
+  /* Header */
+  .app-header {
+    background: linear-gradient(135deg, var(--forest) 0%, var(--sky) 100%);
+    padding: 16px 20px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 100;
+    box-shadow: 0 4px 20px rgba(67,160,71,0.3);
+  }
+  .header-title { display: flex; align-items: center; gap: 10px; }
+  .header-title h1 { color: white; font-size: 1.3rem; font-weight: 900; text-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+  .header-title .emoji { font-size: 1.8rem; }
+  .header-month-nav { display: flex; align-items: center; gap: 8px; }
+  .month-btn {
+    background: rgba(255,255,255,0.3); color: white; border: none;
+    width: 36px; height: 36px; border-radius: 50%; font-size: 1.1rem;
+    cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center;
+  }
+  .month-btn:hover { background: rgba(255,255,255,0.5); transform: scale(1.1); }
+  #currentMonthLabel { color: white; font-weight: 700; font-size: 1rem; min-width: 80px; text-align: center; }
+  .add-btn {
+    background: var(--sun); color: white; border: none;
+    padding: 10px 20px; border-radius: 30px; font-size: 1rem; font-weight: 700;
+    cursor: pointer; box-shadow: 0 4px 12px rgba(255,184,0,0.4);
+    transition: all 0.2s; font-family: inherit;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .add-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(255,184,0,0.5); }
+  .header-add-menu { position: relative; }
+  .add-menu-dropdown {
+    display: none; position: absolute; right: 0; top: calc(100% + 8px);
+    background: white; border-radius: 14px; box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+    overflow: hidden; min-width: 160px; z-index: 150;
+    animation: fadeDown 0.15s ease;
+  }
+  .add-menu-dropdown.open { display: block; }
+  @keyframes fadeDown { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)} }
+  .add-menu-item {
+    display: block; width: 100%; padding: 13px 18px; border: none; background: none;
+    text-align: left; font-family: inherit; font-size: 0.92rem; font-weight: 700;
+    cursor: pointer; color: var(--ink); transition: background 0.15s;
+  }
+  .add-menu-item:hover { background: #F5F5F5; }
+  .add-menu-item.income-item { color: #2E7D32; border-top: 1px solid #F0F0F0; }
+
+  /* Sync status bar */
+  .sync-bar {
+    background: #FAFAFA; border-bottom: 1px solid #EEEEEE;
+    padding: 5px 16px; display: flex; align-items: center; justify-content: space-between;
+    font-size: 0.72rem; font-weight: 700; color: #607D8B;
+  }
+  .sync-refresh-btn {
+    background: none; border: none; font-size: 1rem; cursor: pointer;
+    padding: 2px 6px; border-radius: 8px; transition: background 0.15s;
+  }
+  .sync-refresh-btn:hover { background: #EEEEEE; }
+
+  /* Nav */
+  .nav-tabs {
+    display: flex; background: white; border-bottom: 2px solid #F0F0F0;
+    overflow-x: auto; scrollbar-width: none; position: sticky; top: 70px; z-index: 99;
+  }
+  .nav-tabs::-webkit-scrollbar { display: none; }
+  .nav-tab {
+    flex: 1; min-width: 70px; padding: 12px 8px; text-align: center;
+    border: none; background: none; cursor: pointer; font-family: inherit;
+    font-size: 0.75rem; font-weight: 700; color: var(--muted);
+    border-bottom: 3px solid transparent; transition: all 0.2s;
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+  }
+  .nav-tab .tab-icon { font-size: 1.3rem; }
+  .nav-tab.active { color: var(--forest); border-bottom-color: var(--forest); }
+
+  /* Main Content */
+  .page { display: none; padding: 16px; max-width: 800px; margin: 0 auto; }
+  .page.active { display: block; }
+
+  /* Cards */
+  .card {
+    background: white; border-radius: var(--radius); padding: 20px;
+    box-shadow: var(--card-shadow); margin-bottom: 16px;
+  }
+  .card-title { font-size: 0.9rem; font-weight: 700; color: var(--muted); margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+
+  /* Summary Cards */
+  .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+  .summary-card {
+    border-radius: var(--radius); padding: 16px; text-align: center;
+    position: relative; overflow: hidden;
+  }
+  .summary-card.income { background: linear-gradient(135deg, #43A047, #66BB6A); color: white; }
+  .summary-card.expense { background: linear-gradient(135deg, #E53935, #EF5350); color: white; }
+  .summary-card.balance-pos { background: linear-gradient(135deg, #1565C0, #42A5F5); color: white; }
+  .summary-card.balance-neg { background: linear-gradient(135deg, #FF6B35, #FFA726); color: white; }
+  .summary-card.camp { background: linear-gradient(135deg, #6D4C41, #A1887F); color: white; }
+  .summary-card .s-label { font-size: 0.75rem; font-weight: 700; opacity: 0.85; margin-bottom: 4px; }
+  .summary-card .s-value { font-size: 1.4rem; font-weight: 900; }
+  .summary-card .s-icon { position: absolute; right: 12px; top: 12px; font-size: 2rem; opacity: 0.3; }
+
+  /* Transactions List */
+  .tx-item {
+    display: flex; align-items: center; padding: 12px 0;
+    border-bottom: 1px solid #F5F5F5; cursor: pointer; transition: background 0.15s;
+    border-radius: 10px; padding: 10px 12px; margin: 2px 0;
+  }
+  .tx-item:hover { background: #F8F9FA; }
+  .cat-badge {
+    width: 38px; height: 38px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 900; font-size: 0.9rem; flex-shrink: 0;
+    margin-right: 12px;
+  }
+  .tx-info { flex: 1; min-width: 0; }
+  .tx-shop { font-weight: 700; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tx-meta { font-size: 0.73rem; color: var(--muted); margin-top: 2px; display: flex; gap: 6px; align-items: center; }
+  .tx-amount { font-weight: 900; font-size: 1rem; color: var(--flame); flex-shrink: 0; }
+  .camp-tag {
+    background: #E8F5E9; color: var(--forest);
+    font-size: 0.62rem; font-weight: 700; padding: 2px 6px;
+    border-radius: 20px; border: 1px solid #C8E6C9;
+  }
+  .confirm-tag {
+    font-size: 0.62rem; font-weight: 700; padding: 2px 6px;
+    border-radius: 20px;
+  }
+  .confirm-tag.confirmed { background: #E3F2FD; color: #1565C0; border: 1px solid #BBDEFB; }
+  .confirm-tag.pending { background: #FFF8E1; color: #F57F17; border: 1px solid #FFE082; }
+
+  /* Date Groups */
+  .date-group-header {
+    font-size: 0.78rem; font-weight: 700; color: var(--muted);
+    padding: 12px 4px 6px; display: flex; justify-content: space-between;
+  }
+  .date-group-header .day-total { color: var(--flame); font-weight: 700; }
+
+  /* Charts */
+  .chart-container { position: relative; height: 260px; }
+  .chart-container-pie { position: relative; height: 220px; }
+  canvas { max-width: 100%; }
+
+  /* Camp Page */
+  .camp-header {
+    background: linear-gradient(135deg, #7B1FA2, #1565C0, #00838F);
+    border-radius: var(--radius); padding: 24px; color: white;
+    text-align: center; margin-bottom: 16px; position: relative; overflow: hidden;
+  }
+  .camp-header::before {
+    content: "🎉";
+    position: absolute; font-size: 6rem; opacity: 0.1;
+    right: -10px; bottom: -10px;
+  }
+  .camp-header h2 { font-size: 1.4rem; font-weight: 900; margin-bottom: 4px; }
+  .camp-header p { font-size: 0.85rem; opacity: 0.85; }
+  .camp-stat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .camp-stat {
+    background: rgba(255,255,255,0.15); border-radius: 12px; padding: 14px;
+    text-align: center; backdrop-filter: blur(4px);
+  }
+  .camp-stat .cs-label { font-size: 0.7rem; opacity: 0.85; margin-bottom: 4px; }
+  .camp-stat .cs-value { font-size: 1.2rem; font-weight: 900; }
+
+  .camp-trip-card {
+    border: 2px solid #C8E6C9; border-radius: 14px; padding: 14px;
+    margin-bottom: 10px; background: #F9FBF9;
+  }
+  .camp-trip-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .camp-trip-name { font-weight: 700; font-size: 0.9rem; }
+  .camp-trip-date { font-size: 0.78rem; color: var(--muted); }
+  .camp-trip-total { font-weight: 900; color: var(--forest); font-size: 1rem; }
+  .camp-trip-items { font-size: 0.78rem; color: var(--muted); }
+
+  /* Budget Bar */
+  .budget-bar-wrap { margin-bottom: 12px; }
+  .budget-label { display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: 700; margin-bottom: 4px; }
+  .budget-bar { height: 12px; background: #E0E0E0; border-radius: 20px; overflow: hidden; }
+  .budget-fill { height: 100%; border-radius: 20px; transition: width 0.5s ease; }
+
+  /* Modal */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.5); z-index: 200;
+    align-items: flex-end; justify-content: center;
+    backdrop-filter: blur(4px);
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: white; border-radius: 24px 24px 0 0;
+    width: 100%; max-width: 600px;
+    padding: 24px; max-height: 92vh; overflow-y: auto;
+    animation: slideUp 0.3s ease;
+  }
+  @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  .modal-handle { width: 40px; height: 4px; background: #E0E0E0; border-radius: 20px; margin: 0 auto 20px; }
+  .modal-title { font-size: 1.2rem; font-weight: 900; margin-bottom: 20px; display: flex; align-items: center; gap: 8px; }
+  .form-group { margin-bottom: 14px; }
+  .form-label { font-size: 0.8rem; font-weight: 700; color: var(--muted); margin-bottom: 6px; display: block; }
+  .form-input, .form-select {
+    width: 100%; padding: 12px 14px;
+    border: 2px solid #E8E8E8; border-radius: 12px;
+    font-family: inherit; font-size: 0.95rem;
+    transition: border-color 0.2s; outline: none; background: #FAFAFA;
+  }
+  .form-input:focus, .form-select:focus { border-color: var(--forest); background: white; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .btn-primary {
+    width: 100%; padding: 14px; border: none; border-radius: 14px;
+    background: linear-gradient(135deg, var(--forest), var(--sky));
+    color: white; font-size: 1rem; font-weight: 900; cursor: pointer;
+    font-family: inherit; transition: all 0.2s; margin-top: 8px;
+  }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(67,160,71,0.4); }
+  .btn-danger {
+    width: 100%; padding: 12px; border: 2px solid #EF5350; border-radius: 14px;
+    background: white; color: #EF5350; font-size: 0.9rem; font-weight: 700; cursor: pointer;
+    font-family: inherit; transition: all 0.2s; margin-top: 6px;
+  }
+  .btn-danger:hover { background: #FFEBEE; }
+  .btn-cancel {
+    width: 100%; padding: 12px; border: 2px solid #E0E0E0; border-radius: 14px;
+    background: white; color: var(--muted); font-size: 0.9rem; font-weight: 700; cursor: pointer;
+    font-family: inherit; transition: all 0.2s; margin-top: 6px;
+  }
+
+  /* Stats Page */
+  .stat-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #F5F5F5; }
+  .stat-row:last-child { border-bottom: none; }
+  .stat-row-label { display: flex; align-items: center; gap: 8px; font-size: 0.88rem; font-weight: 700; }
+  .stat-dot { width: 10px; height: 10px; border-radius: 50%; }
+  .stat-amount { font-weight: 900; font-size: 0.95rem; color: var(--flame); }
+  .stat-pct { font-size: 0.75rem; color: var(--muted); margin-left: 6px; }
+
+  /* Buyer tabs */
+  .buyer-tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+  .buyer-tab {
+    flex: 1; padding: 10px; border: 2px solid #E0E0E0; border-radius: 12px;
+    background: white; cursor: pointer; text-align: center; font-family: inherit;
+    font-weight: 700; font-size: 0.85rem; color: var(--muted); transition: all 0.2s;
+  }
+  .buyer-tab.active { border-color: var(--forest); color: var(--forest); background: #F1F8E9; }
+
+  /* Empty state */
+  .empty-state { text-align: center; padding: 40px 20px; color: var(--muted); }
+  .empty-state .emoji { font-size: 3rem; margin-bottom: 12px; }
+  .empty-state p { font-size: 0.9rem; }
+
+  /* Toast */
+  .toast {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(100px);
+    background: var(--ink); color: white; padding: 12px 24px; border-radius: 30px;
+    font-weight: 700; font-size: 0.9rem; z-index: 300; transition: transform 0.3s ease;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* Quick cats */
+  .quick-cats { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  .quick-cat {
+    padding: 6px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 700;
+    cursor: pointer; border: 2px solid transparent; transition: all 0.15s;
+  }
+  .quick-cat.selected { transform: scale(1.05); }
+
+  /* Search & Filter */
+  .search-bar {
+    display: flex; gap: 8px; margin-bottom: 14px; align-items: center;
+  }
+  .search-input {
+    flex: 1; padding: 10px 14px; border: 2px solid #E8E8E8; border-radius: 12px;
+    font-family: inherit; font-size: 0.9rem; outline: none; background: white;
+  }
+  .search-input:focus { border-color: var(--sky); }
+  .filter-btn {
+    padding: 10px 14px; border: 2px solid #E8E8E8; border-radius: 12px;
+    background: white; cursor: pointer; font-size: 0.85rem; font-weight: 700;
+    color: var(--muted); font-family: inherit; transition: all 0.2s; white-space: nowrap;
+  }
+  .filter-btn.active { border-color: var(--forest); color: var(--forest); background: #F1F8E9; }
+
+  /* Card Page */
+  .card-summary-header {
+    background: linear-gradient(135deg, #1565C0, #42A5F5);
+    border-radius: var(--radius); padding: 22px 20px; color: white;
+    margin-bottom: 16px; text-align: center;
+  }
+  .csh-title { font-size: 0.85rem; font-weight: 700; opacity: 0.85; margin-bottom: 4px; }
+  .csh-sub { font-size: 0.78rem; opacity: 0.75; margin-bottom: 6px; }
+  .csh-total { font-size: 2rem; font-weight: 900; letter-spacing: -0.5px; }
+  .csh-note { font-size: 0.72rem; opacity: 0.8; margin-top: 6px; }
+
+  .card-bar-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 0; border-bottom: 1px solid #F5F5F5;
+  }
+  .card-bar-row:last-child { border-bottom: none; }
+  .card-name { font-size: 0.82rem; font-weight: 700; min-width: 110px; flex-shrink: 0; display: flex; align-items: center; gap: 5px; }
+  .card-bar-wrap { flex: 1; height: 10px; background: #EEEEEE; border-radius: 10px; overflow: hidden; }
+  .card-bar-fill { height: 100%; border-radius: 10px; transition: width 0.5s ease; }
+  .card-amount { font-weight: 900; font-size: 0.88rem; min-width: 82px; text-align: right; }
+
+  .card-input-note { font-size: 0.78rem; color: var(--muted); margin-bottom: 14px; line-height: 1.5; }
+  .card-input-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .card-input-label { font-size: 0.82rem; font-weight: 700; min-width: 120px; display: flex; align-items: center; gap: 5px; }
+  .card-input-field {
+    flex: 1; padding: 10px 12px; border: 2px solid #E8E8E8; border-radius: 12px;
+    font-family: inherit; font-size: 0.95rem; outline: none;
+  }
+  .card-input-field:focus { border-color: #1565C0; }
+
+  .card-annual-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 0; border-bottom: 1px solid #F5F5F5; font-size: 0.85rem;
+  }
+  .card-annual-row:last-child { border-bottom: none; }
+  .card-annual-label { font-weight: 700; display: flex; align-items: center; gap: 6px; }
+  .card-annual-amount { font-weight: 900; }
+
+  /* Shop master by category */
+  .shop-import-zone {
+    background: #F8F9FA; border: 2px dashed #CFD8DC; border-radius: 14px;
+    padding: 14px; margin-bottom: 14px;
+  }
+  .shop-import-title { font-weight: 700; font-size: 0.88rem; margin-bottom: 8px; }
+  .shop-import-format { background: white; border-radius: 10px; padding: 10px; }
+  .shop-cat-tabs {
+    display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px;
+  }
+  .shop-cat-tab {
+    padding: 5px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 700;
+    cursor: pointer; border: 2px solid transparent; transition: all 0.15s;
+    background: #F5F5F5; color: var(--muted);
+  }
+  .shop-cat-tab.active { color: white; }
+  .shop-by-cat-list { min-height: 40px; }
+  .shop-master-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 12px; background: #FAFAFA; border-radius: 10px;
+    margin-bottom: 6px; font-size: 0.88rem; font-weight: 600;
+    border: 1px solid #EEEEEE;
+  }
+  .shop-master-item:hover { background: #F0F4F8; }
+  .shop-item-left { display: flex; align-items: center; gap: 8px; }
+  .shop-cat-badge-sm {
+    width: 26px; height: 26px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.75rem; font-weight: 900; flex-shrink: 0;
+  }
+
+  /* Home finance bar */
+  .home-finance-bar {
+    display: flex; align-items: center;
+    background: linear-gradient(135deg, #1A237E, #283593);
+    border-radius: var(--radius); padding: 14px 16px;
+    color: white; cursor: pointer; margin-bottom: 12px;
+    user-select: none; transition: opacity 0.15s;
+  }
+  .home-finance-bar:active { opacity: 0.85; }
+  .hfb-left, .hfb-center, .hfb-right { display: flex; flex-direction: column; align-items: center; flex: 1; }
+  .hfb-label { font-size: 0.65rem; font-weight: 700; opacity: 0.75; margin-bottom: 3px; }
+  .hfb-val { font-size: 1rem; font-weight: 900; }
+  .hfb-balance { color: #80DEEA; }
+  .hfb-divider { width: 1px; height: 36px; background: rgba(255,255,255,0.2); margin: 0 8px; }
+  .hfb-toggle { font-size: 0.7rem; opacity: 0.6; margin-left: 6px; transition: transform 0.2s; }
+  .hfb-toggle.open { transform: rotate(180deg); }
+  .home-finance-detail {
+    background: white; border-radius: var(--radius); padding: 14px 16px;
+    margin-top: -8px; margin-bottom: 12px;
+    box-shadow: var(--card-shadow); border-top: 3px solid #283593;
+  }
+
+  /* Food box card */
+  .food-box-card {
+    background: linear-gradient(135deg, #FF6B35, #FF9800);
+    border-radius: var(--radius); padding: 18px 20px;
+    color: white; cursor: pointer; margin-bottom: 12px;
+    box-shadow: 0 4px 20px rgba(255,107,53,0.35);
+    transition: transform 0.15s, box-shadow 0.15s;
+    user-select: none;
+  }
+  .food-box-card:active { transform: scale(0.98); }
+  .food-box-top { display: flex; align-items: center; gap: 14px; }
+  .food-box-emoji { font-size: 2.4rem; flex-shrink: 0; }
+  .food-box-left { display: flex; align-items: center; gap: 14px; flex: 1; }
+  .food-box-label { font-size: 0.72rem; font-weight: 700; opacity: 0.85; }
+  .food-box-amount { font-size: 1.6rem; font-weight: 900; letter-spacing: -0.5px; }
+  .food-box-right { flex-shrink: 0; text-align: right; }
+  .food-box-sub-item { display: flex; align-items: center; gap: 8px; justify-content: flex-end; margin-bottom: 4px; }
+  .food-box-sub-label { font-size: 0.7rem; opacity: 0.8; }
+  .food-box-sub-val { font-size: 0.9rem; font-weight: 700; }
+  .food-box-progress-wrap { height: 6px; background: rgba(255,255,255,0.3); border-radius: 10px; overflow: hidden; width: 80px; margin-left: auto; }
+  .food-box-progress-fill { height: 100%; border-radius: 10px; background: white; transition: width 0.5s; }
+  .food-box-diff { font-size: 0.68rem; opacity: 0.85; margin-top: 3px; text-align: right; }
+  .food-box-toggle { font-size: 0.7rem; opacity: 0.7; flex-shrink: 0; transition: transform 0.2s; }
+  .food-box-toggle.open { transform: rotate(180deg); }
+
+  .food-detail-panel {
+    background: white; border-radius: var(--radius); padding: 16px 18px;
+    margin-top: -8px; margin-bottom: 12px;
+    box-shadow: var(--card-shadow); border-top: 3px solid #FF6B35;
+  }
+
+  /* Food focus card (kept for detail content) */
+  .food-focus-card { padding: 16px 20px; margin-bottom: 16px; }
+  .food-focus-header { margin-bottom: 14px; }
+  .food-focus-title { font-size: 1rem; font-weight: 900; color: var(--ink); }
+  .food-focus-sub { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
+
+  .food-stat-block { margin-bottom: 14px; }
+  .food-stat-block:last-child { margin-bottom: 0; }
+  .food-stat-header {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-bottom: 6px;
+  }
+  .food-stat-name { font-size: 0.85rem; font-weight: 700; display: flex; align-items: center; gap: 5px; }
+  .food-stat-amount { font-size: 1.1rem; font-weight: 900; }
+  .food-stat-meta { display: flex; justify-content: space-between; font-size: 0.72rem; color: var(--muted); margin-top: 3px; }
+  .food-stat-prev { }
+  .food-stat-diff-up   { color: #E53935; font-weight: 700; }
+  .food-stat-diff-down { color: #43A047; font-weight: 700; }
+
+  .food-sub-list { margin-top: 8px; }
+  .food-sub-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 5px 0; border-bottom: 1px solid #F5F5F5; font-size: 0.8rem;
+  }
+  .food-sub-row:last-child { border-bottom: none; }
+  .food-sub-label { display: flex; align-items: center; gap: 6px; color: var(--muted); font-weight: 600; }
+  .food-sub-amt { font-weight: 700; }
+
+  /* ENJOY page */
+  .enjoy-legend { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+  .enjoy-legend-item {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 0.75rem; font-weight: 700;
+  }
+  .enjoy-legend-dot { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+
+  .enjoy-month-card {
+    border-radius: 14px; padding: 14px; margin-bottom: 10px;
+    border: 2px solid #E8EAF6; background: #FAFBFF;
+  }
+  .enjoy-month-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 10px;
+  }
+  .enjoy-month-title { font-weight: 900; font-size: 0.95rem; color: #3949AB; }
+  .enjoy-month-total { font-weight: 900; font-size: 1rem; color: #7B1FA2; }
+  .enjoy-genre-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 5px 0; border-bottom: 1px solid #F0F0F0; font-size: 0.82rem;
+  }
+  .enjoy-genre-row:last-child { border-bottom: none; }
+  .enjoy-genre-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .enjoy-genre-name { flex: 1; font-weight: 600; }
+  .enjoy-genre-items { font-size: 0.72rem; color: var(--muted); flex: 2; }
+  .enjoy-genre-amt { font-weight: 700; color: var(--flame); }
+
+  /* Tx type chips */
+  .txtype-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 0; }
+  .txtype-chip {
+    padding: 7px 14px; border-radius: 20px; font-size: 0.8rem; font-weight: 700;
+    border: 2px solid #E0E0E0; background: white; color: var(--muted);
+    cursor: pointer; font-family: inherit; transition: all 0.15s;
+  }
+  .txtype-chip.active[id="chip-normal"]  { background: #E3F2FD; border-color: #1565C0; color: #1565C0; }
+  .txtype-chip.active[id="chip-fixed"]   { background: #E8F5E9; border-color: #2E7D32; color: #2E7D32; }
+  .txtype-chip.active[id="chip-yearly"]  { background: #FFF3E0; border-color: #E65100; color: #E65100; }
+  .txtype-tag-fixed  { background: #E8F5E9; color: #2E7D32; border: 1px solid #A5D6A7; font-size: 0.62rem; font-weight: 700; padding: 2px 6px; border-radius: 20px; }
+  .txtype-tag-yearly { background: #FFF3E0; color: #E65100; border: 1px solid #FFCC80; font-size: 0.62rem; font-weight: 700; padding: 2px 6px; border-radius: 20px; }
+
+  .income-extra-block {
+    border: 2px solid #FFF8E1; border-radius: 14px; padding: 12px 14px;
+    margin-top: 12px; background: #FFFDF5;
+  }
+  .income-extra-title {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 0.88rem; font-weight: 700; color: #F57F17;
+  }
+  .income-extra-toggle {
+    background: #FFF8E1; border: 1px solid #FFE082; border-radius: 20px;
+    padding: 4px 10px; font-size: 0.72rem; font-weight: 700; color: #F57F17;
+    cursor: pointer; font-family: inherit;
+  }
+  .income-extra-note { font-size: 0.75rem; color: var(--muted); margin-top:6px; line-height:1.5; }
+
+  /* Income modal */
+  .income-modal-month {
+    text-align: center; font-size: 0.9rem; font-weight: 700;
+    color: var(--muted); margin: -12px 0 16px;
+  }
+  .income-person-block {
+    border: 2px solid #E3F2FD; border-radius: 14px; padding: 14px;
+  }
+  .income-person-block.hitomi-block { border-color: #FCE4EC; }
+  .income-person-header {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 12px;
+  }
+  .income-person-icon { font-size: 1.4rem; }
+  .income-person-name { font-weight: 900; font-size: 1rem; }
+  .income-person-ref {
+    font-size: 0.72rem; color: var(--muted); margin-left: auto;
+    background: #F5F5F5; padding: 2px 8px; border-radius: 10px;
+  }
+  .income-field-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+  }
+  .income-field-grid .form-group { margin-bottom: 0; }
+  .income-input { font-size: 0.9rem !important; padding: 9px 12px !important; }
+  .income-subtotal {
+    display: flex; justify-content: space-between; align-items: center;
+    background: #E3F2FD; border-radius: 10px; padding: 10px 14px; margin-top: 12px;
+    font-weight: 700; font-size: 0.88rem; color: #1565C0;
+  }
+  .income-subtotal.hitomi { background: #FCE4EC; color: #C2185B; }
+  .income-family-total {
+    display: flex; justify-content: space-between; align-items: center;
+    background: linear-gradient(135deg, #43A047, #66BB6A);
+    border-radius: 12px; padding: 14px 16px; margin-top: 14px;
+    font-weight: 900; font-size: 1rem; color: white;
+  }
+
+  /* Bank account section */
+  .bank-account-card {
+    border: 2px solid #E3F2FD; border-radius: 14px; padding: 14px;
+    margin-bottom: 12px; background: #FAFCFF;
+  }
+  .bank-account-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .bank-account-name { font-weight: 700; font-size: 0.95rem; }
+  .bank-balance-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .bank-balance-label { font-size: 0.78rem; color: var(--muted); font-weight: 700; min-width: 110px; }
+  .bank-balance-input {
+    flex: 1; padding: 9px 12px; border: 2px solid #E8E8E8; border-radius: 10px;
+    font-family: inherit; font-size: 0.93rem; outline: none;
+  }
+  .bank-balance-input:focus { border-color: #1565C0; }
+  .bank-balance-calc {
+    background: #E8F5E9; border-radius: 10px; padding: 10px 14px;
+    display: flex; justify-content: space-between; align-items: center; margin-top: 6px;
+  }
+  .bank-balance-calc.warning { background: #FFEBEE; }
+  .bank-calc-label { font-size: 0.78rem; font-weight: 700; color: #2E7D32; }
+  .bank-balance-calc.warning .bank-calc-label { color: #C62828; }
+  .bank-calc-value { font-size: 1rem; font-weight: 900; color: #2E7D32; }
+  .bank-balance-calc.warning .bank-calc-value { color: #C62828; }
+
+  /* Purpose chips */
+  .purpose-chips { display: flex; flex-wrap: wrap; gap: 6px; min-height: 0; }
+  .purpose-chip {
+    padding: 5px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 700;
+    cursor: pointer; border: 2px solid #E0E0E0; background: white; color: var(--muted);
+    transition: all 0.15s; font-family: inherit;
+  }
+  .purpose-chip:hover { border-color: var(--forest); color: var(--forest); background: #F1F8E9; }
+  .purpose-chip.selected { background: var(--forest); color: white; border-color: var(--forest); }
+
+  /* Admin Page */
+  .admin-hero {
+    background: linear-gradient(135deg, #37474F, #546E7A);
+    border-radius: var(--radius); padding: 20px; color: white;
+    text-align: center; margin-bottom: 16px;
+  }
+  .admin-hero-title { font-size: 1.2rem; font-weight: 900; margin: 6px 0 4px; }
+  .admin-hero-sub { font-size: 0.8rem; opacity: 0.8; }
+  .admin-note { font-size: 0.78rem; color: var(--muted); line-height: 1.6; margin-bottom: 12px; }
+  .csv-format-hint {
+    background: #F5F5F5; border-radius: 10px; padding: 10px 14px; margin-bottom: 12px;
+  }
+  .csv-hint-title { font-size: 0.75rem; font-weight: 700; color: var(--muted); margin-bottom: 6px; }
+  .csv-format-hint code { font-size: 0.72rem; color: #333; line-height: 1.6; word-break: break-all; }
+  .csv-drop-zone {
+    border: 2px dashed #BDBDBD; border-radius: 14px; padding: 28px 20px;
+    text-align: center; cursor: pointer; transition: all 0.2s; background: #FAFAFA;
+  }
+  .csv-drop-zone.dragover { border-color: var(--forest); background: #F1F8E9; }
+  .csv-drop-icon { font-size: 2.5rem; margin-bottom: 8px; }
+  .csv-drop-text { font-weight: 700; font-size: 0.9rem; margin-bottom: 4px; }
+  .csv-drop-sub { font-size: 0.78rem; color: var(--muted); margin-bottom: 12px; }
+  .csv-file-btn {
+    display: inline-block; padding: 9px 20px; background: white;
+    border: 2px solid #BDBDBD; border-radius: 20px; cursor: pointer;
+    font-size: 0.85rem; font-weight: 700; color: #555; transition: all 0.2s;
+  }
+  .csv-file-btn:hover { border-color: var(--forest); color: var(--forest); }
+  .csv-preview-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; margin-top: 8px; }
+  .csv-preview-table th { background: #F5F5F5; padding: 6px 8px; text-align: left; border-bottom: 2px solid #E0E0E0; }
+  .csv-preview-table td { padding: 5px 8px; border-bottom: 1px solid #F5F5F5; }
+  .btn-admin {
+    padding: 10px 18px; border: 2px solid #546E7A; border-radius: 12px;
+    background: white; color: #37474F; font-family: inherit; font-weight: 700;
+    font-size: 0.85rem; cursor: pointer; transition: all 0.2s;
+  }
+  .btn-admin:hover { background: #546E7A; color: white; }
+  .btn-admin-sm {
+    padding: 9px 16px; border: 2px solid var(--forest); border-radius: 10px;
+    background: white; color: var(--forest); font-family: inherit; font-weight: 700;
+    font-size: 0.85rem; cursor: pointer; white-space: nowrap;
+  }
+  .btn-admin-sm:hover { background: var(--forest); color: white; }
+  .btn-danger-admin {
+    padding: 10px 16px; border: 2px solid #E53935; border-radius: 12px;
+    background: white; color: #E53935; font-family: inherit; font-weight: 700;
+    font-size: 0.85rem; cursor: pointer; transition: all 0.2s;
+  }
+  .btn-danger-admin:hover { background: #FFEBEE; }
+  @keyframes shake {
+    0%,100%{transform:translateX(0)} 20%,60%{transform:translateX(-6px)} 40%,80%{transform:translateX(6px)}
+  }
+  .shake { animation: shake 0.4s ease; }
+  .master-add-row { display: flex; gap: 8px; align-items: center; margin-bottom: 4px; }
+  .master-item {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 7px 10px; background: #F9F9F9; border-radius: 8px; margin-bottom: 5px;
+    font-size: 0.85rem; font-weight: 700;
+  }
+  .master-del { background: none; border: none; color: #BDBDBD; cursor: pointer; font-size: 1rem; padding: 0 4px; }
+  .master-del:hover { color: #E53935; }
+  .purpose-master-cat { margin-bottom: 14px; }
+  .purpose-master-cat-header {
+    display: flex; align-items: center; gap: 8px; font-size: 0.85rem; font-weight: 700;
+    padding: 6px 0; border-bottom: 1px solid #F0F0F0; margin-bottom: 8px;
+  }
+  .purpose-master-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+  .purpose-master-chip {
+    display: flex; align-items: center; gap: 4px; padding: 4px 10px;
+    border-radius: 20px; font-size: 0.75rem; font-weight: 700;
+    background: #F5F5F5; border: 1px solid #E0E0E0;
+  }
+  .purpose-master-add { display: flex; gap: 6px; margin-top: 4px; }
+  .purpose-master-input {
+    flex: 1; padding: 6px 10px; border: 1.5px solid #E0E0E0; border-radius: 8px;
+    font-family: inherit; font-size: 0.82rem; outline: none;
+  }
+  .purpose-master-input:focus { border-color: var(--forest); }
+
+  /* Key cost rows */
+  .key-cost-row {
+    display: flex; align-items: center; padding: 8px 0;
+    border-bottom: 1px solid #F5F5F5; gap: 10px;
+  }
+  .key-cost-row:last-child { border-bottom: none; }
+  .key-cost-icon { font-size: 1.3rem; width: 32px; text-align: center; flex-shrink: 0; }
+  .key-cost-info { flex: 1; }
+  .key-cost-label { font-size: 0.8rem; font-weight: 700; margin-bottom: 3px; }
+  .key-cost-bar-wrap { height: 6px; background: #EEEEEE; border-radius: 10px; overflow: hidden; }
+  .key-cost-bar-fill { height: 100%; border-radius: 10px; transition: width 0.5s; }
+  .key-cost-amount { font-weight: 900; font-size: 0.9rem; flex-shrink: 0; min-width: 80px; text-align: right; }
+  .key-cost-sub { font-size: 0.7rem; color: var(--muted); }
+
+  /* Buyer mini bars */
+  .buyer-bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .buyer-bar-label { font-size: 0.82rem; font-weight: 700; min-width: 68px; }
+  .buyer-bar-wrap { flex: 1; height: 14px; background: #EEEEEE; border-radius: 10px; overflow: hidden; }
+  .buyer-bar-fill { height: 100%; border-radius: 10px; transition: width 0.5s; }
+  .buyer-bar-amount { font-size: 0.82rem; font-weight: 900; min-width: 80px; text-align: right; }
+
+  @media (min-width: 600px) {
+    .app-header { padding: 16px 32px; }
+    .page { padding: 24px 32px; }
+    .nav-tabs .nav-tab { min-width: 100px; font-size: 0.85rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="app-header">
+  <div class="header-title">
+    <span class="emoji">🏕️</span>
+    <h1>トオル＆ひとみ家計簿</h1>
+  </div>
+  <div class="header-month-nav">
+    <button class="month-btn" onclick="changeMonth(-1)">◀</button>
+    <span id="currentMonthLabel"></span>
+    <button class="month-btn" onclick="changeMonth(1)">▶</button>
+  </div>
+  <div class="header-add-menu">
+    <button class="add-btn" onclick="toggleAddMenu()">＋ 追加 ▾</button>
+    <div class="add-menu-dropdown" id="addMenuDropdown">
+      <button class="add-menu-item" onclick="openAddModal();closeAddMenu()">🛒 支出を追加</button>
+      <button class="add-menu-item income-item" onclick="openIncomeModal();closeAddMenu()">💰 収入を入力</button>
+    </div>
+  </div>
+</div>
+
+<!-- Nav Tabs -->
+<div class="sync-bar">
+  <span id="syncStatusBar">☁️ 起動中…</span>
+  <button class="sync-refresh-btn" onclick="loadFromSheets().then(()=>renderPage(document.querySelector('.page.active')?.id.replace('page-','')||'home'))">🔄</button>
+</div>
+<div class="nav-tabs">
+  <button class="nav-tab active" onclick="showPage('home')" id="tab-home">
+    <span class="tab-icon">🏠</span>ホーム
+  </button>
+  <button class="nav-tab" onclick="showPage('list')" id="tab-list">
+    <span class="tab-icon">📝</span>明細
+  </button>
+  <button class="nav-tab" onclick="showPage('stats')" id="tab-stats">
+    <span class="tab-icon">📊</span>グラフ
+  </button>
+  <button class="nav-tab" onclick="showPage('camp')" id="tab-camp">
+    <span class="tab-icon">🎉</span>ENJOY
+  </button>
+  <button class="nav-tab" onclick="showPage('annual')" id="tab-annual">
+    <span class="tab-icon">📅</span>年間
+  </button>
+  <button class="nav-tab" onclick="showPage('card')" id="tab-card">
+    <span class="tab-icon">💳</span>カード
+  </button>
+  <button class="nav-tab" onclick="showPage('admin')" id="tab-admin">
+    <span class="tab-icon">⚙️</span>管理
+  </button>
+</div>
+
+<!-- Home Page -->
+<div class="page active" id="page-home">
+
+  <!-- 食費・消耗品 節約フォーカス BOXカード（クリックで詳細展開） -->
+  <div class="food-box-card" id="foodBoxCard" onclick="toggleFoodDetail()">
+    <div class="food-box-top">
+      <div class="food-box-left">
+        <div class="food-box-emoji">🍱</div>
+        <div>
+          <div class="food-box-label">今月の食費合計</div>
+          <div class="food-box-amount" id="food-box-total">¥0</div>
+        </div>
+      </div>
+      <div class="food-box-right">
+        <div class="food-box-sub-item">
+          <span class="food-box-sub-label">🧹 消耗品</span>
+          <span class="food-box-sub-val" id="food-box-consume">¥0</span>
+        </div>
+        <div class="food-box-progress-wrap">
+          <div class="food-box-progress-fill" id="food-box-bar"></div>
+        </div>
+        <div class="food-box-diff" id="food-box-diff"></div>
+      </div>
+      <span class="food-box-toggle" id="foodBoxToggle">▼</span>
+    </div>
+  </div>
+  <div class="food-detail-panel" id="foodDetailPanel" style="display:none">
+    <div id="home-food-stats"></div>
+  </div>
+
+  <!-- ENJOY費＋主要固定費 -->
+  <div class="summary-grid">
+    <div class="summary-card camp" onclick="showPage('camp')" style="cursor:pointer">
+      <div class="s-icon">🎉</div>
+      <div class="s-label">今月のENJOY費</div>
+      <div class="s-value" id="home-camp">¥0</div>
+    </div>
+    <div class="summary-card" style="background:linear-gradient(135deg,#546E7A,#78909C);color:white">
+      <div class="s-icon">🏠</div>
+      <div class="s-label">住居・光熱費</div>
+      <div class="s-value" id="home-fixed">¥0</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📊 カテゴリ別支出</div>
+    <div class="chart-container-pie">
+      <canvas id="homeDonutChart"></canvas>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">⚡ 最近の支出</div>
+    <div id="home-recent"></div>
+  </div>
+
+  <!-- 収支サマリーバー（一番下） -->
+  <div class="home-finance-bar" onclick="toggleFinanceDetail()">
+    <div class="hfb-left">
+      <span class="hfb-label">💰 今月収入</span>
+      <span class="hfb-val" id="home-income">—</span>
+    </div>
+    <div class="hfb-divider"></div>
+    <div class="hfb-center">
+      <span class="hfb-label">🛒 支出</span>
+      <span class="hfb-val" id="home-expense">¥0</span>
+    </div>
+    <div class="hfb-divider"></div>
+    <div class="hfb-right">
+      <span class="hfb-label">収支</span>
+      <span class="hfb-val hfb-balance" id="home-balance">—</span>
+    </div>
+    <span class="hfb-toggle" id="hfbToggle">▼</span>
+  </div>
+  <div class="home-finance-detail" id="homeFinanceDetail" style="display:none">
+    <div id="home-buyer-summary"></div>
+  </div>
+
+</div>
+
+<!-- List Page -->
+<div class="page" id="page-list">
+  <div class="search-bar">
+    <input class="search-input" type="text" placeholder="🔍 検索..." id="searchInput" oninput="renderList()">
+    <button class="filter-btn" id="filterTORU" onclick="toggleBuyerFilter('TORU')">トオル</button>
+    <button class="filter-btn" id="filterHITOMI" onclick="toggleBuyerFilter('HITOMI')">ひとみ</button>
+  </div>
+  <div class="search-bar" style="margin-top:-6px">
+    <button class="filter-btn" id="filterFixed" onclick="toggleTypeFilter('fixed')" style="font-size:0.75rem">🔁固定費</button>
+    <button class="filter-btn" id="filterYearly" onclick="toggleTypeFilter('yearly')" style="font-size:0.75rem">📅年払い</button>
+    <span style="font-size:0.75rem;color:var(--muted);padding:0 4px">でフィルター</span>
+  </div>
+  <div id="txList"></div>
+</div>
+
+<!-- Stats Page -->
+<div class="page" id="page-stats">
+  <div class="card">
+    <div class="card-title">📈 月別支出推移</div>
+    <div class="chart-container">
+      <canvas id="monthlyChart"></canvas>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">👫 担当者別支出</div>
+    <div class="chart-container" style="height:200px">
+      <canvas id="buyerChart"></canvas>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">🏷️ カテゴリ別内訳</div>
+    <div id="catBreakdown"></div>
+  </div>
+</div>
+
+<!-- Camp Page -->
+<div class="page" id="page-camp">
+  <div class="camp-header">
+    <h2>🎉 ENJOY</h2>
+    <p>キャンプ・旅行・映画・コンサート・すべての娯楽費</p>
+    <div class="camp-stat-grid" style="margin-top:16px;">
+      <div class="camp-stat">
+        <div class="cs-label">ENJOY総額</div>
+        <div class="cs-value" id="camp-total">¥0</div>
+      </div>
+      <div class="camp-stat">
+        <div class="cs-label">ENJOYイベント数</div>
+        <div class="cs-value" id="camp-count">0件</div>
+      </div>
+      <div class="camp-stat">
+        <div class="cs-label">平均費用/月</div>
+        <div class="cs-value" id="camp-avg">¥0</div>
+      </div>
+      <div class="camp-stat">
+        <div class="cs-label">最大月ENJOY費</div>
+        <div class="cs-value" id="camp-max">¥0</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- サブカテゴリ別月推移 -->
+  <div class="card">
+    <div class="card-title">📊 ENJOY月別推移（ジャンル別）</div>
+    <div class="enjoy-legend" id="enjoyLegend"></div>
+    <div class="chart-container" style="height:260px">
+      <canvas id="campMonthlyChart"></canvas>
+    </div>
+  </div>
+
+  <!-- ジャンル別円グラフ -->
+  <div class="card">
+    <div class="card-title">🎯 ジャンル別内訳（全期間）</div>
+    <div class="chart-container-pie">
+      <canvas id="enjoyPieChart"></canvas>
+    </div>
+  </div>
+
+  <!-- 月別ENJOYカード -->
+  <div class="card">
+    <div class="card-title">🗓️ 月別ENJOYサマリー</div>
+    <div id="campTrips"></div>
+  </div>
+
+  <!-- 年間予算 -->
+  <div class="card">
+    <div class="card-title">💰 ENJOY年間予算</div>
+    <div id="campBudget"></div>
+  </div>
+</div>
+
+<!-- Annual Page -->
+<div class="page" id="page-annual">
+  <div class="card">
+    <div class="card-title">📅 年間 収入 vs 支出</div>
+    <div class="chart-container">
+      <canvas id="annualChart"></canvas>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">💡 光熱費の推移</div>
+    <div class="chart-container" style="height:200px">
+      <canvas id="utilityChart"></canvas>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">👫 担当者別収入内訳</div>
+    <div class="chart-container" style="height:200px">
+      <canvas id="incomeBreakdownChart"></canvas>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">📊 月別サマリー</div>
+    <div id="annualTable"></div>
+  </div>
+</div>
+
+<!-- Credit Card Page -->
+<!-- Card Page -->
+<div class="page" id="page-card">
+
+  <!-- 今月の引落し予測ヘッダー -->
+  <div class="card-summary-header">
+    <div class="csh-title">💳 今月のカード引落し</div>
+    <div class="csh-sub" id="card-month-label"></div>
+    <div class="csh-total" id="card-month-total">¥0</div>
+    <div class="csh-note" id="card-month-note"></div>
+  </div>
+
+  <!-- カード別バー -->
+  <div class="card" style="padding:16px 20px">
+    <div class="card-title">🗂️ カード別内訳</div>
+    <div id="card-bars"></div>
+  </div>
+
+  <!-- 月別推移グラフ -->
+  <div class="card">
+    <div class="card-title">📈 カード引落し推移</div>
+    <div class="chart-container" style="height:240px">
+      <canvas id="cardTrendChart"></canvas>
+    </div>
+  </div>
+
+  <!-- 手動入力セクション -->
+  <div class="card" style="padding:16px 20px">
+    <div class="card-title">✏️ 今月の引落し額を入力・更新</div>
+    <div class="card-input-note">Excelの「クレジット」シートに相当します。毎月引落し後に金額を入力してください。</div>
+    <div id="cardInputFields"></div>
+    <button class="btn-primary" onclick="saveCardData()" style="margin-top:12px">💾 保存する</button>
+  </div>
+
+  <!-- 年間集計テーブル -->
+  <div class="card" style="padding:16px 20px">
+    <div class="card-title">📊 年間カード別合計</div>
+    <div id="cardAnnualTable"></div>
+  </div>
+
+  <!-- 銀行口座残高 -->
+  <div class="card" style="padding:16px 20px">
+    <div class="card-title">🏦 銀行口座残高（月次管理）</div>
+    <div class="card-input-note">毎月給与振込後などに残高を確認して入力してください。カード引落し後の予測残高も自動計算します。</div>
+    <div id="bankAccountSection"></div>
+    <button class="btn-primary" onclick="saveBankData()" style="margin-top:12px">💾 残高を保存する</button>
+  </div>
+
+</div>
+
+<!-- Admin Page -->
+<div class="page" id="page-admin">
+
+  <div class="admin-hero">
+    <div style="font-size:2rem">⚙️</div>
+    <div class="admin-hero-title">管理者ページ</div>
+    <div class="admin-hero-sub">データのインポート・エクスポート・マスタ管理</div>
+  </div>
+
+  <!-- CSVインポート -->
+  <div class="card" style="padding:16px 20px">
+    <div class="card-title">📥 スプレッドシートからCSVインポート</div>
+    <div class="admin-note">ExcelまたはGoogleスプレッドシートの「明細」シートをCSV形式で書き出し、ここにドロップするとデータが一括取り込まれます。</div>
+    <div class="csv-format-hint">
+      <div class="csv-hint-title">📋 CSVの列の順番（1行目はヘッダー行）</div>
+      <code>日付, 曜日, 項目（カテゴリ）, 購入先, 用途, 金額, 支払方法, カード会社, 支払日, 照合, 購入者, 目的</code>
+    </div>
+    <div class="csv-drop-zone" id="csvDropZone"
+      ondragover="event.preventDefault();this.classList.add('dragover')"
+      ondragleave="this.classList.remove('dragover')"
+      ondrop="handleCsvDrop(event)">
+      <div class="csv-drop-icon">📂</div>
+      <div class="csv-drop-text">CSVファイルをここにドラッグ＆ドロップ</div>
+      <div class="csv-drop-sub">または</div>
+      <label class="csv-file-btn">
+        ファイルを選択
+        <input type="file" accept=".csv" style="display:none" onchange="handleCsvFile(this)">
+      </label>
+    </div>
+    <div id="csvPreview" style="margin-top:12px"></div>
+  </div>
+
+  <!-- クラウド同期 -->
+  <div class="card" style="padding:16px 20px;border:2px solid #E3F2FD">
+    <div class="card-title" style="color:#1565C0">☁️ クラウド同期（Googleスプレッドシート）</div>
+    <div class="admin-note">端末のデータをクラウドにアップロード、またはクラウドから最新データを取得します。</div>
+    <div id="adminSyncStatus" style="font-size:0.82rem;font-weight:700;margin:10px 0 8px;color:#607D8B">待機中</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn-admin" onclick="adminUpload()" style="border-color:#1565C0;color:#1565C0">
+        ☁️ 今すぐクラウドに保存
+      </button>
+      <button class="btn-admin" onclick="adminDownload()" style="border-color:#2E7D32;color:#2E7D32">
+        🔄 クラウドから読み込む
+      </button>
+    </div>
+  </div>
+
+  <!-- データエクスポート -->
+  <div class="card" style="padding:16px 20px">
+    <div class="card-title">📤 データエクスポート</div>
+    <div class="admin-note">現在のデータをCSV形式でダウンロードし、Excelやスプレッドシートで確認・バックアップできます。</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px">
+      <button class="btn-admin" onclick="exportCSV('transactions')">💾 支出明細をCSV出力</button>
+      <button class="btn-admin" onclick="exportCSV('cards')">💳 カードデータをCSV出力</button>
+    </div>
+  </div>
+
+  <!-- 用途マスタ管理 -->
+  <div class="card" style="padding:16px 20px">
+    <div class="card-title">🏷️ カテゴリ別 用途マスタ</div>
+    <div class="admin-note">各カテゴリに紐づくよく使う用途を管理します。ここで追加した用途は支出入力時のチップに表示されます。</div>
+    <div id="purposeMasterSection"></div>
+  </div>
+
+  <!-- 購入先マスタ管理 -->
+  <div class="card" style="padding:16px 20px">
+    <div class="card-title">🏪 購入先マスタ（カテゴリ別）</div>
+    <div class="admin-note">カテゴリ別に購入先を管理します。支出入力時の候補に使われます。Excelで作成したリストをCSVでインポートできます。</div>
+
+    <!-- CSVインポート -->
+    <div class="shop-import-zone">
+      <div class="shop-import-title">📥 ExcelからCSVインポート</div>
+      <div class="shop-import-format">
+        <div style="font-size:0.78rem;font-weight:700;margin-bottom:6px">📋 CSVの形式（1行目はヘッダー行）</div>
+        <code style="font-size:0.75rem;background:#F5F5F5;padding:6px 10px;border-radius:8px;display:block">カテゴリ記号, 購入先名</code>
+        <div style="font-size:0.72rem;color:var(--muted);margin-top:6px">例：食,マルナカ　／　ス,出光　／　車,オートバックス</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+        <label class="csv-file-btn" style="font-size:0.82rem;padding:9px 16px">
+          📂 CSVファイルを選択
+          <input type="file" accept=".csv" style="display:none" onchange="handleShopCsvImport(this)">
+        </label>
+        <button class="btn-admin" onclick="downloadShopTemplate()">📄 Excelテンプレートをダウンロード</button>
+      </div>
+      <div id="shopImportResult" style="margin-top:10px"></div>
+    </div>
+
+    <!-- カテゴリタブ -->
+    <div class="shop-cat-tabs" id="shopCatTabs"></div>
+    <!-- 購入先リスト -->
+    <div id="shopMasterByCat"></div>
+
+    <!-- 手動追加 -->
+    <div class="master-add-row" style="margin-top:12px">
+      <select class="form-select" id="shopAddCat" style="max-width:130px;padding:10px 8px;font-size:0.85rem"></select>
+      <input type="text" class="form-input" id="newShopInput" placeholder="購入先を追加..." style="flex:1">
+      <button class="btn-admin-sm" onclick="addShopMaster()">＋追加</button>
+    </div>
+  </div>
+
+  <!-- データリセット -->
+  <div class="card" style="padding:16px 20px;border:2px solid #FFEBEE">
+    <div class="card-title" style="color:#C62828">🔒 データリセット</div>
+    <div class="admin-note">注意：この操作は取り消せません。実行前にパスワードの入力が必要です。必要なデータはエクスポートしてから行ってください。</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
+      <button class="btn-danger-admin" onclick="openResetModal('transactions')">🗑️ 支出明細をリセット</button>
+      <button class="btn-danger-admin" onclick="openResetModal('all')">⚠️ 全データをリセット</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- Income Input Modal -->
+<div class="modal-overlay" id="incomeModalOverlay" onclick="handleIncomeModalClick(event)">
+  <div class="modal" id="incomeModalContent">
+    <div class="modal-handle"></div>
+    <div class="modal-title">💰 収入を入力</div>
+    <div class="income-modal-month" id="incomeModalMonthLabel"></div>
+
+    <!-- トオル -->
+    <div class="income-person-block toru-block">
+      <div class="income-person-header">
+        <span class="income-person-icon">🧑</span>
+        <span class="income-person-name">トオル</span>
+        <span class="income-person-ref" id="incToruRef"></span>
+      </div>
+      <div class="income-field-grid">
+        <div class="form-group">
+          <label class="form-label">基本給</label>
+          <input type="number" class="form-input income-input" id="inc_toru_base" placeholder="0">
+        </div>
+        <div class="form-group">
+          <label class="form-label">残業代</label>
+          <input type="number" class="form-input income-input" id="inc_toru_overtime" placeholder="0">
+        </div>
+        <div class="form-group">
+          <label class="form-label">休日出勤</label>
+          <input type="number" class="form-input income-input" id="inc_toru_holiday" placeholder="0">
+        </div>
+        <div class="form-group">
+          <label class="form-label">賞与</label>
+          <input type="number" class="form-input income-input" id="inc_toru_bonus" placeholder="0">
+        </div>
+        <div class="form-group">
+          <label class="form-label">その他手当</label>
+          <input type="number" class="form-input income-input" id="inc_toru_other" placeholder="0">
+        </div>
+        <div class="form-group">
+          <label class="form-label" style="color:#E53935">控除合計</label>
+          <input type="number" class="form-input income-input" id="inc_toru_deduction" placeholder="0" style="border-color:#FFCDD2">
+        </div>
+      </div>
+      <div class="income-subtotal" id="inc_toru_total_display">
+        <span>🧑 トオル 手取り合計</span><span id="inc_toru_total_val">¥0</span>
+      </div>
+    </div>
+
+    <!-- ひとみ -->
+    <div class="income-person-block hitomi-block" style="margin-top:16px">
+      <div class="income-person-header">
+        <span class="income-person-icon">👩</span>
+        <span class="income-person-name">ひとみ</span>
+        <span class="income-person-ref" id="incHitomiRef"></span>
+      </div>
+      <div class="income-field-grid">
+        <div class="form-group">
+          <label class="form-label">基本給</label>
+          <input type="number" class="form-input income-input" id="inc_hitomi_base" placeholder="0">
+        </div>
+        <div class="form-group">
+          <label class="form-label">残業代</label>
+          <input type="number" class="form-input income-input" id="inc_hitomi_overtime" placeholder="0">
+        </div>
+        <div class="form-group">
+          <label class="form-label">休日出勤</label>
+          <input type="number" class="form-input income-input" id="inc_hitomi_holiday" placeholder="0">
+        </div>
+        <div class="form-group">
+          <label class="form-label">賞与</label>
+          <input type="number" class="form-input income-input" id="inc_hitomi_bonus" placeholder="0">
+        </div>
+        <div class="form-group">
+          <label class="form-label">その他手当</label>
+          <input type="number" class="form-input income-input" id="inc_hitomi_other" placeholder="0">
+        </div>
+        <div class="form-group">
+          <label class="form-label" style="color:#E53935">控除合計</label>
+          <input type="number" class="form-input income-input" id="inc_hitomi_deduction" placeholder="0" style="border-color:#FFCDD2">
+        </div>
+      </div>
+      <div class="income-subtotal hitomi" id="inc_hitomi_total_display">
+        <span>👩 ひとみ 手取り合計</span><span id="inc_hitomi_total_val">¥0</span>
+      </div>
+    </div>
+
+    <!-- 世帯合計 -->
+    <div class="income-family-total" id="inc_family_total_display">
+      <span>🏠 世帯合計 手取り</span>
+      <span id="inc_family_total_val">¥0</span>
+    </div>
+
+    <!-- その他収入 -->
+    <div class="income-extra-block">
+      <div class="income-extra-title">
+        <span>💫 その他収入（任意）</span>
+        <button type="button" class="income-extra-toggle" id="extraIncomeToggle" onclick="toggleExtraIncome()">▼ 展開</button>
+      </div>
+      <div id="extraIncomeFields" style="display:none">
+        <div class="income-extra-note">給与以外の収入を記録できます。世帯合計にも加算されます。</div>
+        <div class="income-field-grid" style="margin-top:10px">
+          <div class="form-group">
+            <label class="form-label">🏛️ 特別給付金</label>
+            <input type="number" class="form-input income-input" id="inc_extra_grant" placeholder="0">
+          </div>
+          <div class="form-group">
+            <label class="form-label">🏦 保険給付金</label>
+            <input type="number" class="form-input income-input" id="inc_extra_insurance" placeholder="0">
+          </div>
+          <div class="form-group">
+            <label class="form-label">📈 株式配当金</label>
+            <input type="number" class="form-input income-input" id="inc_extra_dividend" placeholder="0">
+          </div>
+          <div class="form-group">
+            <label class="form-label">🎯 懸賞・宝くじ</label>
+            <input type="number" class="form-input income-input" id="inc_extra_lottery" placeholder="0">
+          </div>
+          <div class="form-group">
+            <label class="form-label">🔄 その他</label>
+            <input type="number" class="form-input income-input" id="inc_extra_other" placeholder="0">
+          </div>
+          <div class="form-group">
+            <label class="form-label" style="font-size:0.72rem;color:var(--muted)">メモ</label>
+            <input type="text" class="form-input" id="inc_extra_memo" placeholder="内容を入力" style="font-size:0.88rem;padding:9px 12px">
+          </div>
+        </div>
+        <div class="income-subtotal" style="background:#FFF8E1;color:#F57F17;margin-top:10px">
+          <span>💫 その他収入 合計</span><span id="inc_extra_total_val">¥0</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 世帯総合計（給与＋その他） -->
+    <div class="income-family-total" style="background:linear-gradient(135deg,#1A237E,#283593);margin-top:10px">
+      <span>🏠 世帯総収入（給与＋その他）</span>
+      <span id="inc_grand_total_val">¥0</span>
+    </div>
+
+    <button class="btn-primary" onclick="saveIncomeData()" style="margin-top:16px">💾 収入を保存する</button>
+    <button class="btn-cancel" onclick="closeIncomeModal()" style="margin-top:6px">キャンセル</button>
+  </div>
+</div>
+
+<!-- Password Reset Modal -->
+<div class="modal-overlay" id="resetModalOverlay" onclick="handleResetModalClick(event)">
+  <div class="modal" id="resetModalContent" style="max-width:400px">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="resetModalTitle">🔒 パスワード確認</div>
+    <div id="resetModalBody">
+      <p style="font-size:0.88rem;color:var(--muted);margin-bottom:16px;line-height:1.6" id="resetModalDesc"></p>
+      <div class="form-group">
+        <label class="form-label">🔑 管理者パスワード</label>
+        <div style="position:relative">
+          <input type="password" class="form-input" id="resetPasswordInput"
+            placeholder="パスワードを入力"
+            onkeydown="if(event.key==='Enter')confirmReset()"
+            style="padding-right:44px">
+          <button onclick="toggleResetPw()" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:1.1rem" id="resetPwToggle">👁️</button>
+        </div>
+        <div id="resetPwError" style="color:#E53935;font-size:0.78rem;margin-top:6px;display:none">❌ パスワードが違います</div>
+      </div>
+      <button class="btn-primary" onclick="confirmReset()" style="background:linear-gradient(135deg,#C62828,#E53935)">🗑️ リセットを実行する</button>
+      <button class="btn-cancel" onclick="closeResetModal()" style="margin-top:6px">キャンセル</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add/Edit Modal -->
+<div class="modal-overlay" id="modalOverlay" onclick="handleModalClick(event)">
+  <div class="modal" id="modalContent">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="modalTitle">✨ 支出を追加</div>
+    <div id="modalForm">
+      <input type="hidden" id="editId">
+      <div class="form-group">
+        <label class="form-label">📅 日付</label>
+        <input type="date" class="form-input" id="fDate">
+      </div>
+      <div class="form-group">
+        <label class="form-label">🏷️ カテゴリ（よく使う）</label>
+        <div class="quick-cats" id="quickCats"></div>
+        <select class="form-select" id="fCategory" onchange="onCatChange(this.value)">
+          <option value="">選択してください</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">🏪 購入先</label>
+          <input list="shopList" class="form-input" id="fShop" placeholder="例：イオン倉敷">
+          <datalist id="shopList"></datalist>
+        </div>
+        <div class="form-group">
+          <label class="form-label">🎯 用途</label>
+          <div class="purpose-chips" id="purposeChips"></div>
+          <input type="text" class="form-input" id="fPurpose" placeholder="上から選ぶか直接入力" style="margin-top:6px" oninput="onPurposeInput(this.value)">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">💴 金額（円）</label>
+          <input type="number" class="form-input" id="fAmount" placeholder="例：3500">
+        </div>
+        <div class="form-group">
+          <label class="form-label">💳 支払方法</label>
+          <select class="form-select" id="fPayment">
+            <option value="現金">現金</option>
+            <option value="クレジットカード">クレジットカード</option>
+            <option value="電子決済">電子決済</option>
+            <option value="セゾンカード">セゾンカード</option>
+            <option value="楽天カード">楽天カード</option>
+            <option value="三井住友カード">三井住友カード</option>
+            <option value="イオンカード">イオンカード</option>
+            <option value="ぺいぺい">PayPay</option>
+            <option value="auペイ">auペイ</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">👤 購入者</label>
+          <select class="form-select" id="fBuyer">
+            <option value="TORU">トオル</option>
+            <option value="HITOMI">ひとみ</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">✅ 照合</label>
+          <select class="form-select" id="fConfirm">
+            <option value="保留">保留</option>
+            <option value="確定">確定</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">📂 支出タイプ</label>
+        <div class="txtype-chips" id="txTypeChips">
+          <button type="button" class="txtype-chip active" id="chip-normal" onclick="selectTxType('normal')">💸 通常支出</button>
+          <button type="button" class="txtype-chip" id="chip-fixed" onclick="selectTxType('fixed')">🔁 固定費（毎月）</button>
+          <button type="button" class="txtype-chip" id="chip-yearly" onclick="selectTxType('yearly')">📅 年払い（年1回）</button>
+        </div>
+        <input type="hidden" id="fTxType" value="normal">
+      </div>
+      <div class="form-group">
+        <label class="form-label">📝 メモ（任意）</label>
+        <input type="text" class="form-input" id="fMemo" placeholder="例：キャンプ、誕生日プレゼントなど">
+      </div>
+      <button class="btn-primary" onclick="saveTransaction()">💾 保存する</button>
+      <button class="btn-danger" id="deleteBtn" onclick="deleteTransaction()" style="display:none">🗑️ 削除する</button>
+      <button class="btn-cancel" onclick="closeModal()">キャンセル</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ===== DATA =====
+const INITIAL_DATA = [{"date":"2025-11-02","category":"ス","shop":"出光","purpose":"ガソリン","amount":4950,"payment":"楽天カード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2025-11-15","category":"娯","shop":"キャンプ場","purpose":"消耗品","amount":6281,"payment":"現金","confirm":"確定","buyer":"HITOMI","memo":"インナーテント修理"},{"date":"2025-11-16","category":"車","shop":"オートバックス","purpose":"消耗品","amount":3874,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2025-11-16","category":"ス","shop":"出光","purpose":"灯油","amount":6090,"payment":"セゾンカード","confirm":"保留","buyer":"TORU","memo":""},{"date":"2025-11-18","category":"住","shop":"ナンバ","purpose":"","amount":692,"payment":"現金","confirm":"確定","buyer":"TORU","memo":"キャンプ"},{"date":"2025-11-23","category":"ス","shop":"出光","purpose":"ガソリン","amount":5250,"payment":"楽天カード","confirm":"保留","buyer":"HITOMI","memo":"キャンプ"},{"date":"2025-11-23","category":"食","shop":"フレスタ","purpose":"","amount":5242,"payment":"三井住友カード","confirm":"保留","buyer":"HITOMI","memo":"キャンプ"},{"date":"2025-11-23","category":"娯","shop":"キャンプ場","purpose":"","amount":4900,"payment":"現金","confirm":"確定","buyer":"HITOMI","memo":"キャンプ"},{"date":"2025-11-24","category":"食","shop":"イオン倉敷","purpose":"食料品","amount":4708,"payment":"楽天カード","confirm":"保留","buyer":"HITOMI","memo":"キャンプ"},{"date":"2025-11-24","category":"食","shop":"外食","purpose":"ラーメン","amount":3344,"payment":"現金","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2025-11-24","category":"コ","shop":"セブンイレブン","purpose":"","amount":384,"payment":"三井住友カード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2025-11-24","category":"ス","shop":"出光","purpose":"ガソリン","amount":5282,"payment":"セゾンカード","confirm":"保留","buyer":"TORU","memo":""},{"date":"2025-11-24","category":"食","shop":"イオン倉敷","purpose":"日用品","amount":1083,"payment":"ぺいぺい","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2025-11-27","category":"コ","shop":"セブンイレブン","purpose":"","amount":697,"payment":"三井住友カード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2025-12-01","category":"食","shop":"二軒屋","purpose":"","amount":4878,"payment":"ぺいぺい","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2025-12-03","category":"コ","shop":"セブンイレブン","purpose":"","amount":873,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2025-12-03","category":"コ","shop":"ローソン","purpose":"間食","amount":618,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2025-12-03","category":"医","shop":"歯科","purpose":"治療","amount":4270,"payment":"三井住友カード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2025-12-04","category":"コ","shop":"セブンイレブン","purpose":"朝食","amount":352,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2025-12-04","category":"食","shop":"イオン倉敷","purpose":"食料品","amount":5595,"payment":"イオンカード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2025-12-04","category":"食","shop":"イオン倉敷","purpose":"食事","amount":858,"payment":"現金","confirm":"確定","buyer":"TORU","memo":"銀だこ"},{"date":"2025-12-04","category":"食","shop":"イオン倉敷","purpose":"食料品","amount":1900,"payment":"イオンカード","confirm":"保留","buyer":"HITOMI","memo":"誕生日プレゼント"},{"date":"2025-12-05","category":"食","shop":"マルナカ","purpose":"","amount":4329,"payment":"イオンカード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2025-12-05","category":"コ","shop":"ローソン","purpose":"間食","amount":384,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2025-12-06","category":"コ","shop":"ローソン","purpose":"昼食","amount":516,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2025-12-06","category":"食","shop":"外食","purpose":"ラーメン","amount":2410,"payment":"現金","confirm":"確定","buyer":"HITOMI","memo":"中華（福満源）"},{"date":"2025-12-06","category":"食","shop":"二軒屋","purpose":"","amount":1296,"payment":"ぺいぺい","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2025-12-07","category":"コ","shop":"ファミリーマート","purpose":"朝食","amount":1079,"payment":"三井住友カード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2025-12-07","category":"食","shop":"外食","purpose":"パン屋","amount":1274,"payment":"ぺいぺい","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2025-12-07","category":"衣","shop":"ワークマン","purpose":"","amount":5756,"payment":"楽天カード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2025-12-07","category":"衣","shop":"ワークマン","purpose":"","amount":4760,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2025-12-07","category":"食","shop":"外食","purpose":"その他","amount":2130,"payment":"楽天カード","confirm":"保留","buyer":"HITOMI","memo":"モスバーガー"},{"date":"2025-12-08","category":"コ","shop":"ローソン","purpose":"間食","amount":782,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2025-12-08","category":"食","shop":"マルナカ","purpose":"","amount":4239,"payment":"イオンカード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2025-12-09","category":"コ","shop":"ローソン","purpose":"間食","amount":471,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2025-12-10","category":"コ","shop":"ローソン","purpose":"間食","amount":527,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2025-12-11","category":"食","shop":"イオン倉敷","purpose":"食料品","amount":2731,"payment":"イオンカード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2025-12-11","category":"コ","shop":"ファミリーマート","purpose":"間食","amount":1122,"payment":"三井住友カード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2025-12-11","category":"食","shop":"イオン倉敷","purpose":"食事","amount":2030,"payment":"ぺいぺい","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2025-12-11","category":"コ","shop":"ローソン","purpose":"間食","amount":541,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2025-12-11","category":"ス","shop":"出光","purpose":"ガソリン","amount":4969,"payment":"セゾンカード","confirm":"保留","buyer":"TORU","memo":""},{"date":"2025-12-12","category":"コ","shop":"セブンイレブン","purpose":"夕食","amount":689,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2025-12-13","category":"衣","shop":"ワークマン","purpose":"","amount":1780,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2025-12-13","category":"コ","shop":"セブンイレブン","purpose":"朝食","amount":500,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2025-12-13","category":"ス","shop":"出光","purpose":"ガソリン","amount":5353,"payment":"セゾンカード","confirm":"保留","buyer":"TORU","memo":"プロボックス"},{"date":"2025-12-13","category":"ス","shop":"出光","purpose":"整備","amount":1000,"payment":"現金","confirm":"確定","buyer":"TORU","memo":"タイヤ交換"},{"date":"2025-12-13","category":"美","shop":"美容院","purpose":"","amount":20968,"payment":"現金","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2025-12-13","category":"食","shop":"マルナカ","purpose":"","amount":5056,"payment":"イオンカード","confirm":"保留","buyer":"HITOMI","memo":"キャンプ食材"},{"date":"2025-12-13","category":"コ","shop":"ローソン","purpose":"間食","amount":698,"payment":"三井住友カード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2025-12-13","category":"娯","shop":"キャンプ場","purpose":"","amount":4900,"payment":"現金","confirm":"確定","buyer":"HITOMI","memo":""},{"date":"2025-12-13","category":"交","shop":"高速道路","purpose":"","amount":910,"payment":"イオンカード","confirm":"保留","buyer":"HITOMI","memo":"鴨方～尾道"},{"date":"2025-12-13","category":"交","shop":"高速道路","purpose":"","amount":590,"payment":"イオンカード","confirm":"保留","buyer":"HITOMI","memo":"三次東～高田"},{"date":"2025-12-14","category":"交","shop":"高速道路","purpose":"","amount":400,"payment":"イオンカード","confirm":"保留","buyer":"HITOMI","memo":"高田～千代田"},{"date":"2025-12-14","category":"交","shop":"高速道路","purpose":"","amount":880,"payment":"イオンカード","confirm":"保留","buyer":"HITOMI","memo":"千代田～三次東"},{"date":"2025-12-14","category":"交","shop":"高速道路","purpose":"","amount":910,"payment":"イオンカード","confirm":"保留","buyer":"HITOMI","memo":"尾道～鴨方"},{"date":"2025-12-14","category":"食","shop":"外食","purpose":"その他","amount":3100,"payment":"ぺいぺい","confirm":"保留","buyer":"HITOMI","memo":"お好み焼き"},{"date":"2025-12-14","category":"食","shop":"外食","purpose":"","amount":680,"payment":"ぺいぺい","confirm":"保留","buyer":"HITOMI","memo":"マック"},{"date":"2025-12-14","category":"娯","shop":"その他","purpose":"","amount":1400,"payment":"現金","confirm":"確定","buyer":"TORU","memo":"銭湯"},{"date":"2025-12-14","category":"コ","shop":"ローソン","purpose":"間食","amount":1063,"payment":"三井住友カード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2025-12-14","category":"食","shop":"マルナカ","purpose":"","amount":4670,"payment":"イオンカード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2025-12-14","category":"住","shop":"ケーズデンキ","purpose":"","amount":2065,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2025-12-14","category":"日","shop":"ダイソー","purpose":"","amount":330,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2025-12-15","category":"コ","shop":"ローソン","purpose":"間食","amount":363,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2025-12-15","category":"食","shop":"二軒屋","purpose":"","amount":5368,"payment":"ぺいぺい","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2025-12-16","category":"コ","shop":"ローソン","purpose":"間食","amount":546,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2025-12-17","category":"コ","shop":"ローソン","purpose":"間食","amount":705,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2025-12-18","category":"コ","shop":"ローソン","purpose":"間食","amount":797,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2025-12-19","category":"コ","shop":"セブンイレブン","purpose":"昼食","amount":868,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2025-12-19","category":"食","shop":"マルナカ","purpose":"","amount":2560,"payment":"イオンカード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2025-12-19","category":"食","shop":"外食","purpose":"その他","amount":690,"payment":"三井住友カード","confirm":"保留","buyer":"HITOMI","memo":"マクドナルド"},{"date":"2025-12-20","category":"コ","shop":"セブンイレブン","purpose":"間食","amount":683,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2025-12-20","category":"食","shop":"外食","purpose":"焼肉屋","amount":6300,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2025-12-21","category":"食","shop":"外食","purpose":"定食","amount":2926,"payment":"イオンカード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2025-12-21","category":"食","shop":"イオン倉敷","purpose":"食事","amount":900,"payment":"イオンカード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2025-12-21","category":"駐","shop":"岡山市内","purpose":"","amount":2000,"payment":"楽天カード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2025-12-21","category":"食","shop":"軽食","purpose":"","amount":840,"payment":"現金","confirm":"確定","buyer":"HITOMI","memo":""},{"date":"2025-12-21","category":"食","shop":"外食","purpose":"その他","amount":3320,"payment":"三井住友カード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2025-12-21","category":"コ","shop":"ローソン","purpose":"間食","amount":749,"payment":"三井住友カード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2025-12-21","category":"食","shop":"軽食","purpose":"","amount":530,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2025-12-21","category":"コ","shop":"ファミリーマート","purpose":"間食","amount":388,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2025-12-22","category":"食","shop":"マルナカ","purpose":"","amount":4764,"payment":"イオンカード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2025-12-22","category":"コ","shop":"ローソン","purpose":"間食","amount":842,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2025-12-23","category":"ス","shop":"出光","purpose":"灯油","amount":5032,"payment":"セゾンカード","confirm":"保留","buyer":"TORU","memo":""},{"date":"2025-12-23","category":"食","shop":"外食","purpose":"定食","amount":2040,"payment":"楽天カード","confirm":"保留","buyer":"HITOMI","memo":"やよい軒"},{"date":"2025-12-23","category":"コ","shop":"ローソン","purpose":"間食","amount":427,"payment":"三井住友カード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2025-12-24","category":"食","shop":"マルナカ","purpose":"","amount":6244,"payment":"イオンカード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2025-12-24","category":"住","shop":"ケーズデンキ","purpose":"","amount":2232,"payment":"楽天カード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2025-12-24","category":"住","shop":"ケーズデンキ","purpose":"","amount":2641,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2025-12-25","category":"コ","shop":"ローソン","purpose":"間食","amount":295,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2025-12-26","category":"コ","shop":"セブンイレブン","purpose":"昼食","amount":1005,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2025-12-26","category":"コ","shop":"セブンイレブン","purpose":"夕食","amount":1665,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2025-12-27","category":"コ","shop":"セブンイレブン","purpose":"昼食","amount":1148,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2025-12-27","category":"食","shop":"マルナカ","purpose":"","amount":3452,"payment":"イオンカード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2025-12-28","category":"食","shop":"外食","purpose":"その他","amount":2990,"payment":"ぺいぺい","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2025-12-28","category":"コ","shop":"ローソン","purpose":"間食","amount":257,"payment":"現金","confirm":"確定","buyer":"HITOMI","memo":""},{"date":"2025-12-28","category":"住","shop":"ケーズデンキ","purpose":"","amount":8909,"payment":"現金","confirm":"確定","buyer":"TORU","memo":"電気毛布"},{"date":"2025-12-28","category":"食","shop":"外食","purpose":"うどん","amount":509,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2025-12-28","category":"食","shop":"イオン倉敷","purpose":"食事","amount":460,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2025-12-28","category":"食","shop":"イオン倉敷","purpose":"食料品","amount":3819,"payment":"現金","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2025-12-29","category":"美","shop":"美容院","purpose":"","amount":9350,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2025-12-29","category":"車","shop":"オートバックス","purpose":"小物","amount":2160,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2025-12-29","category":"コ","shop":"セブンイレブン","purpose":"","amount":843,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2025-12-30","category":"住","shop":"その他","purpose":"","amount":500,"payment":"現金","confirm":"確定","buyer":"HITOMI","memo":"焼却場"},{"date":"2025-12-30","category":"食","shop":"外食","purpose":"その他","amount":1380,"payment":"三井住友カード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2025-12-30","category":"コ","shop":"セブンイレブン","purpose":"その他","amount":880,"payment":"三井住友カード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2025-12-31","category":"食","shop":"エブリイ","purpose":"","amount":2864,"payment":"楽天カード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2025-12-31","category":"食","shop":"エブリイ","purpose":"","amount":4733,"payment":"楽天カード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2025-12-31","category":"食","shop":"ハローズ","purpose":"","amount":2092,"payment":"楽天カード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2025-12-31","category":"衣","shop":"GU","purpose":"","amount":6960,"payment":"三井住友カード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2025-12-31","category":"コ","shop":"セブンイレブン","purpose":"間食","amount":1465,"payment":"三井住友カード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2025-12-31","category":"食","shop":"外食","purpose":"定食","amount":2500,"payment":"三井住友カード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2025-12-31","category":"食","shop":"イオン倉敷","purpose":"食料品","amount":7026,"payment":"イオンカード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2025-12-31","category":"食","shop":"イオン倉敷","purpose":"食料品","amount":3100,"payment":"イオンカード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2025-12-31","category":"食","shop":"イオン倉敷","purpose":"食料品","amount":2337,"payment":"イオンカード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2025-12-31","category":"ス","shop":"ENEOS","purpose":"洗車","amount":2000,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2025-12-31","category":"ス","shop":"出光","purpose":"ガソリン","amount":6000,"payment":"楽天カード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2026-01-01","category":"季","shop":"お年玉","purpose":"","amount":10000,"payment":"現金","confirm":"確定","buyer":"HITOMI","memo":"心美"},{"date":"2026-01-01","category":"季","shop":"お年玉","purpose":"","amount":5000,"payment":"現金","confirm":"確定","buyer":"HITOMI","memo":"祐也"},{"date":"2026-01-02","category":"コ","shop":"セブンイレブン","purpose":"その他","amount":841,"payment":"三井住友カード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2026-01-03","category":"ス","shop":"出光","purpose":"ガソリン","amount":4421,"payment":"三井住友カード","confirm":"保留","buyer":"TORU","memo":"1ℓ＝134円"},{"date":"2026-01-03","category":"食","shop":"ハッピーマート","purpose":"","amount":1951,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2026-01-03","category":"娯","shop":"キャンプ場","purpose":"","amount":7000,"payment":"現金","confirm":"確定","buyer":"TORU","memo":"牛窓海星キャンプ場"},{"date":"2026-01-03","category":"チ","shop":"auペイ","purpose":"","amount":10000,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2026-01-04","category":"コ","shop":"セブンイレブン","purpose":"昼食","amount":800,"payment":"現金","confirm":"確定","buyer":"HITOMI","memo":""},{"date":"2026-01-05","category":"食","shop":"外食","purpose":"パン屋","amount":1479,"payment":"現金","confirm":"確定","buyer":"HITOMI","memo":""},{"date":"2026-01-05","category":"食","shop":"エブリイ","purpose":"","amount":5349,"payment":"現金","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2026-01-05","category":"食","shop":"その他","purpose":"","amount":1223,"payment":"現金","confirm":"保留","buyer":"HITOMI","memo":"シャトレーゼ"},{"date":"2026-01-05","category":"ネ","shop":"Amazon","purpose":"","amount":1045,"payment":"セゾンカード","confirm":"保留","buyer":"TORU","memo":"ラバーパット"},{"date":"2026-01-05","category":"ネ","shop":"Amazon","purpose":"","amount":5357,"payment":"セゾンカード","confirm":"保留","buyer":"TORU","memo":"ジャッキスタンド"},{"date":"2026-01-05","category":"ネ","shop":"Amazon","purpose":"","amount":12280,"payment":"セゾンカード","confirm":"保留","buyer":"TORU","memo":"フロアージャッキ"},{"date":"2026-01-05","category":"ネ","shop":"Amazon","purpose":"","amount":3380,"payment":"セゾンカード","confirm":"保留","buyer":"TORU","memo":"雪かきスコップ"},{"date":"2026-01-06","category":"食","shop":"その他","purpose":"","amount":1991,"payment":"イオンカード","confirm":"保留","buyer":"HITOMI","memo":"イオン　ビッグ"},{"date":"2026-01-06","category":"住","shop":"ナフコ","purpose":"","amount":5405,"payment":"楽天カード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2026-01-06","category":"日","shop":"ダイソー","purpose":"","amount":550,"payment":"楽天カード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2026-01-07","category":"食","shop":"二軒屋","purpose":"","amount":3357,"payment":"ぺいぺい","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2026-01-07","category":"食","shop":"外食","purpose":"ラーメン","amount":900,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2026-01-07","category":"食","shop":"外食","purpose":"ラーメン","amount":900,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2026-01-07","category":"食","shop":"二軒屋","purpose":"","amount":3357,"payment":"ぺいぺい","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2026-01-09","category":"食","shop":"ニシナ","purpose":"","amount":3474,"payment":"楽天カード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2026-01-10","category":"車","shop":"オートバックス","purpose":"工賃","amount":9218,"payment":"現金","confirm":"確定","buyer":"TORU","memo":"タイヤ交換工具"},{"date":"2026-01-10","category":"食","shop":"外食","purpose":"ラーメン","amount":2160,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2026-01-10","category":"住","shop":"エディオン","purpose":"","amount":2830,"payment":"セゾンカード","confirm":"保留","buyer":"TORU","memo":"携帯アクセサリー"},{"date":"2026-01-10","category":"食","shop":"外食","purpose":"その他","amount":1600,"payment":"楽天カード","confirm":"保留","buyer":"HITOMI","memo":"なか卯"},{"date":"2026-01-10","category":"コ","shop":"セブンイレブン","purpose":"間食","amount":682,"payment":"三井住友カード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2026-01-11","category":"コ","shop":"ローソン","purpose":"間食","amount":585,"payment":"三井住友カード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2026-01-11","category":"娯","shop":"イオン倉敷","purpose":"雑貨","amount":1980,"payment":"現金","confirm":"確定","buyer":"TORU","memo":"携帯カバー"},{"date":"2026-01-11","category":"食","shop":"外食","purpose":"焼肉屋","amount":4290,"payment":"現金","confirm":"確定","buyer":"HITOMI","memo":"おふく"},{"date":"2026-01-11","category":"ス","shop":"出光","purpose":"灯油","amount":3800,"payment":"セゾンカード","confirm":"保留","buyer":"TORU","memo":"1L=100"},{"date":"2026-01-11","category":"食","shop":"ハッピーマート","purpose":"","amount":1080,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2026-01-11","category":"食","shop":"イオン倉敷","purpose":"食料品","amount":285,"payment":"イオンカード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2026-01-11","category":"コ","shop":"セブンイレブン","purpose":"間食","amount":630,"payment":"三井住友カード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2026-01-12","category":"食","shop":"外食","purpose":"その他","amount":3000,"payment":"現金","confirm":"確定","buyer":"HITOMI","memo":"まるみ"},{"date":"2026-01-12","category":"食","shop":"軽食","purpose":"","amount":480,"payment":"現金","confirm":"確定","buyer":"HITOMI","memo":"タイ焼き"},{"date":"2026-01-12","category":"季","shop":"お札","purpose":"","amount":1250,"payment":"現金","confirm":"確定","buyer":"HITOMI","memo":"田倉牛神社"},{"date":"2026-01-12","category":"衣","shop":"ワークマン","purpose":"","amount":2278,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2026-01-12","category":"娯","shop":"その他","purpose":"","amount":2600,"payment":"現金","confirm":"確定","buyer":"TORU","memo":"ゲオ"},{"date":"2026-01-12","category":"食","shop":"マルナカ","purpose":"","amount":1015,"payment":"イオンカード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2026-01-12","category":"食","shop":"マルナカ","purpose":"","amount":6834,"payment":"イオンカード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2026-01-12","category":"コ","shop":"セブンイレブン","purpose":"","amount":705,"payment":"三井住友カード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2026-01-12","category":"コ","shop":"ローソン","purpose":"","amount":260,"payment":"三井住友カード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2026-01-13","category":"ス","shop":"出光","purpose":"ガソリン","amount":3800,"payment":"セゾンカード","confirm":"保留","buyer":"TORU","memo":""},{"date":"2026-01-14","category":"食","shop":"二軒屋","purpose":"","amount":6012,"payment":"ぺいぺい","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2026-01-14","category":"日","shop":"セイムス","purpose":"","amount":1188,"payment":"ぺいぺい","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2026-01-16","category":"食","shop":"外食","purpose":"パン屋","amount":813,"payment":"ぺいぺい","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2026-01-16","category":"コ","shop":"セブンイレブン","purpose":"間食","amount":454,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2026-01-17","category":"コ","shop":"セブンイレブン","purpose":"その他","amount":732,"payment":"三井住友カード","confirm":"保留","buyer":"TORU","memo":""},{"date":"2026-01-17","category":"住","shop":"ヤマダ電機","purpose":"","amount":1280,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2026-01-17","category":"住","shop":"ケーズデンキ","purpose":"","amount":2183,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2026-01-18","category":"食","shop":"マルナカ","purpose":"","amount":7994,"payment":"イオンカード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2026-01-18","category":"日","shop":"ホームセンタ","purpose":"","amount":4023,"payment":"三井住友カード","confirm":"保留","buyer":"HITOMI","memo":"DCM"},{"date":"2026-01-18","category":"ス","shop":"出光","purpose":"ガソリン","amount":4690,"payment":"楽天カード","confirm":"保留","buyer":"HITOMI","memo":"1ℓ＝134円"},{"date":"2026-01-18","category":"コ","shop":"セブンイレブン","purpose":"間食","amount":421,"payment":"三井住友カード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2026-01-18","category":"食","shop":"外食","purpose":"定食","amount":3150,"payment":"現金","confirm":"保留","buyer":"TORU","memo":""},{"date":"2026-01-19","category":"医","shop":"渡辺内科医院","purpose":"","amount":10290,"payment":"楽天カード","confirm":"保留","buyer":"HITOMI","memo":"胃カメラ"},{"date":"2026-01-21","category":"食","shop":"ニシナ","purpose":"","amount":4815,"payment":"楽天カード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2026-01-23","category":"食","shop":"マルナカ","purpose":"","amount":2277,"payment":"イオンカード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2026-01-24","category":"コ","shop":"ローソン","purpose":"間食","amount":265,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2026-01-24","category":"コ","shop":"ファミリーマート","purpose":"間食","amount":888,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2026-01-24","category":"娯","shop":"その他","purpose":"","amount":18801,"payment":"セゾンカード","confirm":"保留","buyer":"TORU","memo":"ヒマラヤ"},{"date":"2026-01-24","category":"ス","shop":"出光","purpose":"ガソリン","amount":3321,"payment":"セゾンカード","confirm":"保留","buyer":"TORU","memo":""},{"date":"2026-01-25","category":"娯","shop":"スキー場","purpose":"","amount":5500,"payment":"現金","confirm":"確定","buyer":"TORU","memo":"　ハチ北"},{"date":"2026-01-25","category":"交","shop":"高速道路","purpose":"","amount":4660,"payment":"セゾンカード","confirm":"保留","buyer":"TORU","memo":"片道2310+2350（往復）"},{"date":"2026-01-25","category":"駐","shop":"県外","purpose":"","amount":1500,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2026-01-25","category":"ス","shop":"出光","purpose":"ガソリン","amount":3672,"payment":"セゾンカード","confirm":"保留","buyer":"TORU","memo":""},{"date":"2026-01-25","category":"娯","shop":"その他","purpose":"","amount":3160,"payment":"現金","confirm":"確定","buyer":"TORU","memo":"お土産"},{"date":"2026-01-25","category":"コ","shop":"セブンイレブン","purpose":"間食","amount":135,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2026-01-25","category":"コ","shop":"ファミリーマート","purpose":"間食","amount":350,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2026-01-25","category":"娯","shop":"その他","purpose":"","amount":842,"payment":"現金","confirm":"確定","buyer":"TORU","memo":"お土産"},{"date":"2026-01-25","category":"コ","shop":"ローソン","purpose":"夕食","amount":535,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2026-01-26","category":"食","shop":"二軒屋","purpose":"","amount":5200,"payment":"ぺいぺい","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2026-01-27","category":"食","shop":"ハッピーマート","purpose":"","amount":387,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2026-01-27","category":"日","shop":"ホームセンタ","purpose":"","amount":1872,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2026-01-27","category":"食","shop":"ニシナ","purpose":"","amount":4577,"payment":"楽天カード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2026-01-28","category":"食","shop":"マルナカ","purpose":"","amount":2067,"payment":"イオンカード","confirm":"保留","buyer":"HITOMI","memo":"1/25購入分"},{"date":"2026-01-28","category":"食","shop":"外食","purpose":"パン屋","amount":2230,"payment":"現金","confirm":"確定","buyer":"HITOMI","memo":"1/10購入分"},{"date":"2026-01-29","category":"コ","shop":"ローソン","purpose":"間食","amount":584,"payment":"三井住友カード","confirm":"保留","buyer":"TORU","memo":""},{"date":"2026-01-29","category":"チ","shop":"auペイ","purpose":"","amount":5000,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2026-01-30","category":"コ","shop":"セブンイレブン","purpose":"間食","amount":943,"payment":"三井住友カード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2026-01-31","category":"食","shop":"マルナカ","purpose":"","amount":6387,"payment":"イオンカード","confirm":"保留","buyer":"HITOMI","memo":"キャンプ食材"},{"date":"2026-01-31","category":"食","shop":"マルナカ","purpose":"","amount":105,"payment":"現金","confirm":"確定","buyer":"HITOMI","memo":""},{"date":"2026-01-31","category":"娯","shop":"キャンプ場","purpose":"","amount":7000,"payment":"現金","confirm":"確定","buyer":"HITOMI","memo":"牛窓海星キャンプ場"},{"date":"2026-02-01","category":"娯","shop":"イオン岡山","purpose":"雑貨","amount":6880,"payment":"セゾンカード","confirm":"保留","buyer":"TORU","memo":"iPhoneケース"},{"date":"2026-02-01","category":"娯","shop":"イオン岡山","purpose":"雑貨","amount":6160,"payment":"現金","confirm":"確定","buyer":"TORU","memo":"ムラサキスポーツ"},{"date":"2026-02-01","category":"食","shop":"エブリイ","purpose":"","amount":6337,"payment":"楽天カード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2026-02-01","category":"コ","shop":"ファミリーマート","purpose":"間食","amount":560,"payment":"三井住友カード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2026-02-01","category":"食","shop":"外食","purpose":"パスタ","amount":3610,"payment":"現金","confirm":"確定","buyer":"HITOMI","memo":"ロッサ"},{"date":"2026-02-01","category":"ネ","shop":"Amazon","purpose":"","amount":2943,"payment":"セゾンカード","confirm":"保留","buyer":"TORU","memo":"携帯ストラップ"},{"date":"2026-02-03","category":"食","shop":"マルナカ","purpose":"","amount":1572,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2026-02-03","category":"日","shop":"ホームセンタ","purpose":"","amount":3388,"payment":"現金","confirm":"確定","buyer":"TORU","memo":"ニトリ"},{"date":"2026-02-04","category":"食","shop":"二軒屋","purpose":"","amount":5531,"payment":"ぺいぺい","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2026-02-06","category":"車","shop":"オートバックス","purpose":"小物","amount":503,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2026-02-06","category":"ス","shop":"出光","purpose":"ガソリン","amount":3155,"payment":"セゾンカード","confirm":"保留","buyer":"TORU","memo":"1L=137"},{"date":"2026-02-06","category":"交","shop":"高速道路","purpose":"","amount":410,"payment":"セゾンカード","confirm":"保留","buyer":"TORU","memo":""},{"date":"2026-02-07","category":"駐","shop":"県外","purpose":"","amount":1800,"payment":"現金","confirm":"確定","buyer":"TORU","memo":"ハチ高原"},{"date":"2026-02-07","category":"娯","shop":"スキー場","purpose":"","amount":5500,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2026-02-07","category":"食","shop":"外食","purpose":"定食","amount":1100,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2026-02-07","category":"交","shop":"高速道路","purpose":"","amount":2350,"payment":"セゾンカード","confirm":"保留","buyer":"TORU","memo":""},{"date":"2026-02-07","category":"コ","shop":"セブンイレブン","purpose":"間食","amount":497,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2026-02-08","category":"ス","shop":"出光","purpose":"ガソリン","amount":4306,"payment":"セゾンカード","confirm":"保留","buyer":"TORU","memo":"1L=137"},{"date":"2026-02-08","category":"ス","shop":"出光","purpose":"灯油","amount":5920,"payment":"セゾンカード","confirm":"保留","buyer":"TORU","memo":"1L=102"},{"date":"2026-02-08","category":"住","shop":"ヤマダ電機","purpose":"","amount":44892,"payment":"楽天カード","confirm":"保留","buyer":"HITOMI","memo":"高圧洗浄機"},{"date":"2026-02-08","category":"食","shop":"外食","purpose":"焼肉屋","amount":3240,"payment":"ぺいぺい","confirm":"保留","buyer":"HITOMI","memo":"炭化のくいしんぼう"},{"date":"2026-02-09","category":"医","shop":"渡辺内科医院","purpose":"","amount":390,"payment":"現金","confirm":"確定","buyer":"HITOMI","memo":""},{"date":"2026-02-09","category":"医","shop":"歯科","purpose":"治療","amount":3380,"payment":"三井住友カード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2026-02-09","category":"食","shop":"マルナカ","purpose":"","amount":6723,"payment":"イオンカード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2026-02-09","category":"日","shop":"ダイソー","purpose":"","amount":1207,"payment":"ぺいぺい","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2026-02-09","category":"住","shop":"ナフコ","purpose":"","amount":3011,"payment":"ぺいぺい","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2026-02-10","category":"食","shop":"二軒屋","purpose":"","amount":4117,"payment":"ぺいぺい","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2026-02-11","category":"食","shop":"ハッピーマート","purpose":"","amount":794,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2026-02-11","category":"食","shop":"マルナカ","purpose":"","amount":4797,"payment":"イオンカード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2026-02-13","category":"ス","shop":"出光","purpose":"ガソリン","amount":1663,"payment":"セゾンカード","confirm":"保留","buyer":"TORU","memo":"1L=137"},{"date":"2026-02-13","category":"食","shop":"ハッピーマート","purpose":"","amount":976,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2026-02-14","category":"駐","shop":"県外","purpose":"","amount":800,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2026-02-14","category":"娯","shop":"スキー場","purpose":"","amount":4000,"payment":"現金","confirm":"確定","buyer":"TORU","memo":"わかさ氷ノ山"},{"date":"2026-02-14","category":"コ","shop":"セブンイレブン","purpose":"間食","amount":172,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2026-02-14","category":"コ","shop":"ファミリーマート","purpose":"間食","amount":328,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2026-02-14","category":"娯","shop":"その他","purpose":"","amount":2515,"payment":"現金","confirm":"確定","buyer":"TORU","memo":"お土産"},{"date":"2026-02-14","category":"食","shop":"外食","purpose":"定食","amount":1606,"payment":"現金","confirm":"確定","buyer":"TORU","memo":"大阪屋食堂"},{"date":"2026-02-14","category":"娯","shop":"コンサート","purpose":"","amount":23000,"payment":"楽天カード","confirm":"保留","buyer":"HITOMI","memo":"東京スカパラダイスオーケストラ"},{"date":"2026-02-14","category":"娯","shop":"その他","purpose":"","amount":1800,"payment":"楽天カード","confirm":"保留","buyer":"HITOMI","memo":"バレンタインチョコ"},{"date":"2026-02-14","category":"食","shop":"その他","purpose":"","amount":800,"payment":"楽天カード","confirm":"保留","buyer":"HITOMI","memo":"シャトレーゼ"},{"date":"2026-02-15","category":"コ","shop":"セブンイレブン","purpose":"間食","amount":548,"payment":"三井住友カード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2026-02-15","category":"食","shop":"イオン倉敷","purpose":"食事","amount":220,"payment":"現金","confirm":"確定","buyer":"HITOMI","memo":""},{"date":"2026-02-15","category":"食","shop":"外食","purpose":"パン屋","amount":2520,"payment":"現金","confirm":"確定","buyer":"HITOMI","memo":"コパン"},{"date":"2026-02-15","category":"娯","shop":"イオン倉敷","purpose":"雑貨","amount":990,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2026-02-15","category":"食","shop":"イオン倉敷","purpose":"食料品","amount":3576,"payment":"イオンカード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2026-02-15","category":"ス","shop":"出光","purpose":"ガソリン","amount":4830,"payment":"楽天カード","confirm":"保留","buyer":"HITOMI","memo":"1L＝139"},{"date":"2026-02-15","category":"食","shop":"その他","purpose":"","amount":190,"payment":"ぺいぺい","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2026-02-15","category":"住","shop":"ヤマダ電機","purpose":"","amount":1078,"payment":"楽天カード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2026-02-15","category":"食","shop":"マルナカ","purpose":"","amount":1918,"payment":"イオンカード","confirm":"保留","buyer":"HITOMI","memo":"2/6購入"},{"date":"2026-02-17","category":"食","shop":"二軒屋","purpose":"","amount":5460,"payment":"ぺいぺい","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2026-02-18","category":"コ","shop":"セブンイレブン","purpose":"昼食","amount":884,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2026-02-19","category":"食","shop":"マルナカ","purpose":"","amount":4961,"payment":"イオンカード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2026-02-19","category":"ス","shop":"出光","purpose":"ガソリン","amount":4580,"payment":"セゾンカード","confirm":"保留","buyer":"TORU","memo":"1L=139"},{"date":"2026-02-21","category":"車","shop":"整備","purpose":"","amount":5600,"payment":"現金","confirm":"確定","buyer":"TORU","memo":"オイル交換（新山）"},{"date":"2026-02-21","category":"医","shop":"歯科","purpose":"定期健診","amount":4420,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2026-02-21","category":"娯","shop":"イオン倉敷","purpose":"雑貨","amount":1980,"payment":"セゾンカード","confirm":"保留","buyer":"TORU","memo":""},{"date":"2026-02-21","category":"食","shop":"イオン倉敷","purpose":"","amount":527,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2026-02-22","category":"食","shop":"マルナカ","purpose":"","amount":4502,"payment":"イオンカード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2026-02-22","category":"娯","shop":"その他","purpose":"","amount":1750,"payment":"ぺいぺい","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2026-02-22","category":"娯","shop":"その他","purpose":"","amount":1610,"payment":"ぺいぺい","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2026-02-22","category":"娯","shop":"キャンプ場","purpose":"","amount":5800,"payment":"現金","confirm":"確定","buyer":"HITOMI","memo":""},{"date":"2026-02-23","category":"食","shop":"外食","purpose":"パン屋","amount":880,"payment":"ぺいぺい","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2026-02-23","category":"日","shop":"金光薬局","purpose":"","amount":3460,"payment":"三井住友カード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2026-02-23","category":"娯","shop":"その他","purpose":"","amount":1410,"payment":"ぺいぺい","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2026-02-23","category":"住","shop":"ケーズデンキ","purpose":"","amount":929,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2026-02-24","category":"食","shop":"二軒屋","purpose":"","amount":5303,"payment":"ぺいぺい","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2026-02-25","category":"コ","shop":"ローソン","purpose":"間食","amount":345,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2026-02-25","category":"食","shop":"マルナカ","purpose":"","amount":4339,"payment":"イオンカード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2026-02-26","category":"コ","shop":"セブンイレブン","purpose":"間食","amount":301,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2026-02-26","category":"コ","shop":"ローソン","purpose":"間食","amount":354,"payment":"三井住友カード","confirm":"保留","buyer":"TORU","memo":""},{"date":"2026-02-27","category":"コ","shop":"セブンイレブン","purpose":"間食","amount":280,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2026-02-28","category":"チ","shop":"auペイ","purpose":"","amount":2000,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2026-02-28","category":"食","shop":"ニシナ","purpose":"","amount":276,"payment":"ぺいぺい","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2026-02-28","category":"住","shop":"ナフコ","purpose":"","amount":3628,"payment":"ぺいぺい","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2026-02-28","category":"住","shop":"ナフコ","purpose":"","amount":408,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2026-02-28","category":"食","shop":"外食","purpose":"パン屋","amount":1447,"payment":"現金","confirm":"確定","buyer":"HITOMI","memo":""},{"date":"2026-02-28","category":"食","shop":"外食","purpose":"うどん","amount":1510,"payment":"現金","confirm":"確定","buyer":"TORU","memo":"讃岐うどん"},{"date":"2026-03-01","category":"食","shop":"マルナカ","purpose":"","amount":2572,"payment":"イオンカード","confirm":"保留","buyer":"HITOMI","memo":"2/21購入"},{"date":"2026-03-01","category":"食","shop":"外食","purpose":"その他","amount":2960,"payment":"三井住友カード","confirm":"保留","buyer":"HITOMI","memo":"スシロー"},{"date":"2026-03-01","category":"食","shop":"外食","purpose":"ラーメン","amount":2200,"payment":"現金","confirm":"確定","buyer":"HITOMI","memo":"63ラーメン"},{"date":"2026-03-02","category":"食","shop":"外食","purpose":"焼肉屋","amount":3795,"payment":"楽天カード","confirm":"保留","buyer":"HITOMI","memo":"どんどん亭"},{"date":"2026-03-03","category":"食","shop":"ニシナ","purpose":"","amount":6029,"payment":"楽天カード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2026-03-04","category":"食","shop":"イオン倉敷","purpose":"食料品","amount":3601,"payment":"イオンカード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2026-03-04","category":"コ","shop":"セブンイレブン","purpose":"","amount":572,"payment":"三井住友カード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2026-03-04","category":"ス","shop":"出光","purpose":"ガソリン","amount":4380,"payment":"楽天カード","confirm":"保留","buyer":"HITOMI","memo":"1L=143"},{"date":"2026-03-06","category":"食","shop":"外食","purpose":"ラーメン","amount":800,"payment":"現金","confirm":"確定","buyer":"TORU","memo":"昼食"},{"date":"2026-03-06","category":"食","shop":"外食","purpose":"定食","amount":1050,"payment":"現金","confirm":"確定","buyer":"HITOMI","memo":""},{"date":"2026-03-06","category":"娯","shop":"コンサート","purpose":"","amount":6500,"payment":"現金","confirm":"確定","buyer":"HITOMI","memo":"怪談"},{"date":"2026-03-06","category":"娯","shop":"その他","purpose":"","amount":880,"payment":"現金","confirm":"確定","buyer":"HITOMI","memo":""},{"date":"2026-03-07","category":"食","shop":"ハローズ","purpose":"","amount":643,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""},{"date":"2026-03-08","category":"食","shop":"外食","purpose":"うどん","amount":2470,"payment":"現金","confirm":"確定","buyer":"HITOMI","memo":"ぶっかけ"},{"date":"2026-03-08","category":"住","shop":"ダイキ","purpose":"","amount":8681,"payment":"楽天カード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2026-03-08","category":"コ","shop":"ローソン","purpose":"朝食","amount":337,"payment":"ぺいぺい","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2026-03-09","category":"食","shop":"マルナカ","purpose":"","amount":7552,"payment":"イオンカード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2026-03-09","category":"ネ","shop":"Amazon","purpose":"","amount":1113,"payment":"セゾンカード","confirm":"保留","buyer":"TORU","memo":"3/7購入"},{"date":"2026-03-09","category":"ネ","shop":"Amazon","purpose":"","amount":4749,"payment":"amazonn","confirm":"保留","buyer":"TORU","memo":""},{"date":"2026-03-10","category":"食","shop":"エブリイ","purpose":"","amount":5346,"payment":"楽天カード","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2026-03-10","category":"ス","shop":"出光","purpose":"ガソリン","amount":4881,"payment":"セゾンカード","confirm":"保留","buyer":"TORU","memo":"1L=145"},{"date":"2026-03-13","category":"食","shop":"二軒屋","purpose":"","amount":2377,"payment":"ぺいぺい","confirm":"保留","buyer":"HITOMI","memo":""},{"date":"2026-03-14","category":"娯","shop":"友達交流会","purpose":"","amount":6000,"payment":"現金","confirm":"確定","buyer":"TORU","memo":""}];
+
+// ===== CREDIT CARD DATA (from クレジット sheet) =====
+const CARD_COLORS = {
+  'セゾンカード':   '#1565C0',
+  '三井住友カード': '#E53935',
+  '楽天カード':    '#FF6B35',
+  'ENEOSカード':  '#43A047',
+  'イオンカード':  '#8E24AA',
+  'Amazonカード': '#FF9800',
+  'ぺいぺい':     '#FF4081',
+  'auペイ':       '#00ACC1',
+};
+const CARD_EMOJIS = {
+  'セゾンカード':'🔵','三井住友カード':'🔴','楽天カード':'🟠',
+  'ENEOSカード':'🟢','イオンカード':'🟣','Amazonカード':'🟡',
+  'ぺいぺい':'💸','auペイ':'📱',
+};
+const INITIAL_CARD_DATA = {"2025-01":{"セゾンカード":48126,"三井住友カード":0,"楽天カード":93277,"ENEOSカード":0,"イオンカード":15488,"Amazonカード":0},"2025-02":{"セゾンカード":93621,"三井住友カード":0,"楽天カード":33333,"ENEOSカード":0,"イオンカード":41079,"Amazonカード":0},"2025-03":{"セゾンカード":31106,"三井住友カード":0,"楽天カード":33333,"ENEOSカード":0,"イオンカード":20490,"Amazonカード":0},"2025-04":{"セゾンカード":59470,"三井住友カード":0,"楽天カード":33333,"ENEOSカード":0,"イオンカード":11383,"Amazonカード":0},"2025-05":{"セゾンカード":48825,"三井住友カード":0,"楽天カード":33333,"ENEOSカード":0,"イオンカード":23565,"Amazonカード":0},"2025-06":{"セゾンカード":34997,"三井住友カード":4874,"楽天カード":37613,"ENEOSカード":0,"イオンカード":49288,"Amazonカード":0},"2025-07":{"セゾンカード":43764,"三井住友カード":809,"楽天カード":33333,"ENEOSカード":0,"イオンカード":16730,"Amazonカード":0},"2025-08":{"セゾンカード":92092,"三井住友カード":0,"楽天カード":33333,"ENEOSカード":0,"イオンカード":18905,"Amazonカード":0},"2025-09":{"セゾンカード":138807,"三井住友カード":590,"楽天カード":33333,"ENEOSカード":0,"イオンカード":33126,"Amazonカード":0},"2025-10":{"セゾンカード":38660,"三井住友カード":18430,"楽天カード":33333,"ENEOSカード":0,"イオンカード":53561,"Amazonカード":0},"2025-11":{"セゾンカード":116452,"三井住友カード":19020,"楽天カード":33333,"ENEOSカード":0,"イオンカード":30988,"Amazonカード":555957},"2025-12":{"セゾンカード":223879,"三井住友カード":0,"楽天カード":33333,"ENEOSカード":0,"イオンカード":37242,"Amazonカード":3571},"2026-01":{"セゾンカード":99768,"三井住友カード":0,"楽天カード":33333,"ENEOSカード":0,"イオンカード":0,"Amazonカード":0},"2026-02":{"セゾンカード":60153,"三井住友カード":5426,"楽天カード":33333,"ENEOSカード":0,"イオンカード":0,"Amazonカード":0}};
+const CARD_STORAGE_KEY = 'kakeibo_cards_v1';
+let cardData = {};
+
+function loadCardData() {
+  try {
+    const saved = localStorage.getItem(CARD_STORAGE_KEY);
+    cardData = saved ? JSON.parse(saved) : JSON.parse(JSON.stringify(INITIAL_CARD_DATA));
+  } catch(e) { cardData = JSON.parse(JSON.stringify(INITIAL_CARD_DATA)); }
+}
+function _saveCardLocal() {
+  try { localStorage.setItem(CARD_STORAGE_KEY, JSON.stringify(cardData)); } catch(e) {}
+}
+function getCardKey(year, month) { return `${year}-${String(month).padStart(2,'0')}`; }
+function getMonthCardData(year, month) { return cardData[getCardKey(year, month)] || {}; }
+const ALL_CARDS = ['セゾンカード','三井住友カード','楽天カード','イオンカード','Amazonカード','ぺいぺい','auペイ'];
+
+// ===== BANK ACCOUNT DATA =====
+const BANK_ACCOUNTS = [
+  { id: 'toru_yucho',   name: 'トオル　ゆうちょ',   emoji: '🏦', color: '#C62828',  isCardDebit: true  },
+  { id: 'toru_bank1',   name: 'トオル　銀行1',       emoji: '🔵', color: '#1565C0',  isCardDebit: false },
+  { id: 'toru_bank2',   name: 'トオル　銀行2',       emoji: '🟦', color: '#0288D1',  isCardDebit: false },
+  { id: 'hitomi_yucho', name: 'ひとみ　ゆうちょ',   emoji: '🏧', color: '#E91E63',  isCardDebit: false },
+  { id: 'hitomi_chugoku', name: 'ひとみ　中国銀行', emoji: '🔴', color: '#B71C1C',  isCardDebit: false },
+  { id: 'hitomi_rakuten', name: 'ひとみ　楽天銀行', emoji: '🟥', color: '#D32F2F',  isCardDebit: false },
+];
+const BANK_STORAGE_KEY = 'kakeibo_bank_v1';
+let bankData = {};
+
+function loadBankData() {
+  try {
+    const saved = localStorage.getItem(BANK_STORAGE_KEY);
+    bankData = saved ? JSON.parse(saved) : {};
+  } catch(e) { bankData = {}; }
+}
+function _saveBankLocal() {
+  try { localStorage.setItem(BANK_STORAGE_KEY, JSON.stringify(bankData)); } catch(e) {}
+}
+function getBankKey(year, month) { return `${year}-${String(month).padStart(2,'0')}`; }
+function getMonthBankData(year, month) { return bankData[getBankKey(year, month)] || {}; }
+
+// ===== INCOME DATA (from 給料管理 sheet) =====
+const INCOME_DATA = {"2025-01":{"toru":204397,"hitomi":173866,"total":378263},"2025-02":{"toru":224188,"hitomi":224963,"total":449151},"2025-03":{"toru":226588,"hitomi":210174,"total":436762},"2025-04":{"toru":219015,"hitomi":192812,"total":411827},"2025-05":{"toru":205457,"hitomi":234187,"total":439644},"2025-06":{"toru":208827,"hitomi":197880,"total":406707},"2025-07":{"toru":213077,"hitomi":205375,"total":418452},"2025-08":{"toru":236090,"hitomi":192941,"total":429031},"2025-09":{"toru":236090,"hitomi":188925,"total":425015},"2025-10":{"toru":164010,"hitomi":197516,"total":361526},"2025-11":{"toru":322843,"hitomi":229251,"total":552094},"2025-12":{"toru":472264,"hitomi":172247,"total":644511},"2026-01":{"toru":219237,"hitomi":178949,"total":398186}};
+
+// User-editable income layer (localStorage) — takes priority over INCOME_DATA
+const INCOME_STORAGE_KEY = 'kakeibo_income_v1';
+let incomeUserData = {};
+function loadIncomeUserData() {
+  try {
+    const saved = localStorage.getItem(INCOME_STORAGE_KEY);
+    incomeUserData = saved ? JSON.parse(saved) : {};
+  } catch(e) { incomeUserData = {}; }
+}
+function _saveIncomeLocal() {
+  try { localStorage.setItem(INCOME_STORAGE_KEY, JSON.stringify(incomeUserData)); } catch(e) {}
+}
+function getIncomeKey(year, month) { return `${year}-${String(month).padStart(2,'0')}`; }
+function getMonthIncome(year, month) {
+  const key = getIncomeKey(year, month);
+  if (incomeUserData[key]) return incomeUserData[key];
+  return INCOME_DATA[key] || null;
+}
+
+// ===== FIXED EXPENSE DATA (from 毎月かかる sheet) =====
+const FIXED_DATA = {"2025-01":{"住居費":51827,"電気代":11830,"ガス代":10685,"玉島テレビ":3080,"携帯_トオル":3655,"携帯_ひとみ":4284,"ガソリン_シエラ":6260,"楽天証券":33333},"2025-02":{"住居費":51827,"電気代":14233,"ガス代":11547,"水道代":9497,"玉島テレビ":3080,"携帯_トオル":2643,"携帯_ひとみ":4284,"ガソリン_シエラ":23151,"楽天証券":33333},"2025-03":{"住居費":51827,"電気代":14264,"ガス代":11072,"玉島テレビ":3080,"携帯_トオル":2643,"携帯_ひとみ":6887,"ガソリン_シエラ":15021,"楽天証券":33333},"2025-04":{"住居費":51827,"電気代":11082,"ガス代":12903,"水道代":10191,"玉島テレビ":14366,"携帯_トオル":2643,"携帯_ひとみ":6887,"ガソリン_シエラ":11882,"楽天証券":33333},"2025-05":{"住居費":51827,"電気代":11706,"ガス代":11952,"玉島テレビ":3080,"携帯_トオル":2643,"携帯_ひとみ":6887,"ガソリン_シエラ":15709,"楽天証券":33333},"2025-06":{"住居費":51827,"電気代":10146,"ガス代":8151,"水道代":10191,"玉島テレビ":3080,"携帯_トオル":2643,"携帯_ひとみ":6887,"ガソリン_シエラ":5146,"楽天証券":33333},"2025-07":{"住居費":51827,"電気代":8421,"ガス代":7333,"玉島テレビ":3080,"携帯_トオル":2643,"携帯_ひとみ":6888,"ガソリン_シエラ":9635,"楽天証券":33333},"2025-08":{"住居費":51827,"電気代":11298,"ガス代":4953,"水道代":7431,"玉島テレビ":3080,"携帯_トオル":2721,"携帯_ひとみ":6888,"ガソリン_シエラ":9165,"ガソリン_プロボックス":4424,"楽天証券":33333},"2025-09":{"住居費":51827,"電気代":19608,"ガス代":4475,"玉島テレビ":3080,"携帯_トオル":3546,"携帯_ひとみ":10489,"ガソリン_シエラ":10444,"ガソリン_プロボックス":5321,"楽天証券":33333},"2025-10":{"住居費":51827,"電気代":23235,"ガス代":6479,"水道代":9318,"玉島テレビ":14366,"携帯_トオル":2644,"携帯_ひとみ":3029,"ガソリン_シエラ":10123,"ガソリン_プロボックス":4424,"楽天証券":33333},"2025-11":{"住居費":51827,"電気代":16804,"ガス代":8956,"玉島テレビ":3080,"携帯_トオル":3260,"携帯_ひとみ":2975,"ガソリン_シエラ":5282,"ガソリン_プロボックス":10200,"楽天証券":33333},"2025-12":{"住居費":51827,"電気代":9697,"ガス代":8837,"水道代":10774,"玉島テレビ":3080,"携帯_トオル":3128,"楽天証券":33333},"2026-01":{"住居費":51827,"電気代":10917,"ガス代":13428,"玉島テレビ":3080,"携帯_トオル":2864,"ガソリン_シエラ":10793,"ガソリン_プロボックス":4690},"2026-02":{"住居費":51827,"電気代":12590,"ガス代":15606,"水道代":10191,"玉島テレビ":3080,"携帯_トオル":3218,"ガソリン_シエラ":6243,"ガソリン_プロボックス":4830},"2026-03":{"住居費":51827,"玉島テレビ":3080},"2026-04":{"住居費":51827,"玉島テレビ":14366},"2026-05":{"住居費":51827,"玉島テレビ":3080},"2026-06":{"住居費":51827,"玉島テレビ":3080},"2026-07":{"住居費":51827,"玉島テレビ":3080},"2026-08":{"住居費":51827,"玉島テレビ":3080},"2026-09":{"住居費":51827,"玉島テレビ":3080},"2026-10":{"住居費":51827,"玉島テレビ":14366},"2026-11":{"住居費":51827,"玉島テレビ":3080},"2026-12":{"住居費":51827,"玉島テレビ":3080}};
+
+function getMonthFixed(year, month) { return FIXED_DATA[getIncomeKey(year, month)] || {}; }
+function getFixedUtility(year, month) {
+  const f = getMonthFixed(year, month);
+  return (f['電気代']||0) + (f['ガス代']||0) + (f['水道代']||0);
+}
+function getFixedHousing(year, month) {
+  return getMonthFixed(year, month)['住居費'] || 0;
+}
+
+// Category config
+const CAT_CONFIG = {
+  "食": { label: "食費", color: "#FF6B35", bg: "#FFF3EF", emoji: "🍱" },
+  "コ": { label: "コンビニ", color: "#FF9800", bg: "#FFF8E1", emoji: "🏪" },
+  "ス": { label: "ガソリン", color: "#2196F3", bg: "#E3F2FD", emoji: "⛽" },
+  "娯": { label: "娯楽", color: "#9C27B0", bg: "#F3E5F5", emoji: "🎪" },
+  "住": { label: "住居費", color: "#607D8B", bg: "#ECEFF1", emoji: "🏠" },
+  "車": { label: "車", color: "#795548", bg: "#EFEBE9", emoji: "🚗" },
+  "衣": { label: "衣服", color: "#E91E63", bg: "#FCE4EC", emoji: "👗" },
+  "美": { label: "美容", color: "#F06292", bg: "#FCE4EC", emoji: "💄" },
+  "医": { label: "医療", color: "#F44336", bg: "#FFEBEE", emoji: "🏥" },
+  "日": { label: "日用品", color: "#4CAF50", bg: "#E8F5E9", emoji: "🧹" },
+  "交": { label: "交通費", color: "#00BCD4", bg: "#E0F7FA", emoji: "🚌" },
+  "ネ": { label: "ネット通販", color: "#FF5722", bg: "#FBE9E7", emoji: "📦" },
+  "駐": { label: "駐車場", color: "#78909C", bg: "#ECEFF1", emoji: "🅿️" },
+  "季": { label: "季節・イベント", color: "#FFC107", bg: "#FFFDE7", emoji: "🎉" },
+  "税": { label: "税金", color: "#546E7A", bg: "#ECEFF1", emoji: "📋" },
+  "チ": { label: "チャージ", color: "#26A69A", bg: "#E0F2F1", emoji: "💳" },
+};
+
+// Storage key
+const STORAGE_KEY = 'kakeibo_v1';
+
+let transactions = [];
+let currentYear = 2026;
+let currentMonth = 3;
+let buyerFilter = null;
+let typeFilter  = null;  // 'fixed' | 'yearly' | null
+let charts = {};
+let editingId = null;
+
+// ===== STORAGE =====
+function loadData() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      transactions = JSON.parse(saved);
+    } else {
+      transactions = INITIAL_DATA.map((t, i) => ({ ...t, id: 'init_' + i }));
+      saveData();
+    }
+  } catch(e) {
+    transactions = INITIAL_DATA.map((t, i) => ({ ...t, id: 'init_' + i }));
+  }
+}
+
+function _localSaveData() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions)); } catch(e) {}
+}
+
+// ===== HELPERS =====
+function fmt(n) {
+  return '¥' + Math.round(n).toLocaleString('ja-JP');
+}
+// ENJOY = 娯楽カテゴリ全体（キャンプ・旅行・映画・コンサート等）
+function isEnjoy(t) { return t.category === '娯'; }
+// Keep isCamp as a subset for camp-specific tagging in lists
+function isCamp(t) {
+  return t.shop === 'キャンプ場' ||
+    (t.memo && t.memo.includes('キャンプ')) ||
+    (t.shop && t.shop.includes('キャンプ'));
+}
+// Fixed / recurring cost helper
+function isFixedCost(t)  { return t.txType === 'fixed'; }
+function isYearlyCost(t) { return t.txType === 'yearly'; }
+function getCatConf(cat) {
+  return CAT_CONFIG[cat] || { label: cat || '他', color: '#9E9E9E', bg: '#F5F5F5', emoji: '📌' };
+}
+function getMonthTx(year, month) {
+  return transactions.filter(t => {
+    const d = new Date(t.date);
+    return d.getFullYear() === year && (d.getMonth() + 1) === month;
+  });
+}
+function genId() {
+  return 'tx_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+}
+
+// ===== NAVIGATION =====
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
+  renderPage(name);
+}
+
+function changeMonth(delta) {
+  currentMonth += delta;
+  if (currentMonth > 12) { currentMonth = 1; currentYear++; }
+  if (currentMonth < 1) { currentMonth = 12; currentYear--; }
+  updateMonthLabel();
+  const active = document.querySelector('.page.active');
+  if (active) renderPage(active.id.replace('page-', ''));
+}
+
+function updateMonthLabel() {
+  document.getElementById('currentMonthLabel').textContent = currentYear + '年' + currentMonth + '月';
+}
+
+function renderPage(name) {
+  if (name === 'home') renderHome();
+  else if (name === 'list') renderList();
+  else if (name === 'stats') renderStats();
+  else if (name === 'camp') renderCamp();
+  else if (name === 'annual') renderAnnual();
+  else if (name === 'card') renderCard();
+}
+
+// ===== HOME =====
+function renderHome() {
+  const txs = getMonthTx(currentYear, currentMonth);
+  const expense = txs.reduce((s, t) => s + t.amount, 0);
+  const campExp = txs.filter(isEnjoy).reduce((s, t) => s + t.amount, 0);
+  const incomeData = getMonthIncome(currentYear, currentMonth);
+  const income = incomeData ? incomeData.total : null;
+  const balance = income !== null ? income - expense : null;
+
+  // Finance bar
+  document.getElementById('home-income').textContent  = income !== null ? fmt(income) : '未入力';
+  document.getElementById('home-expense').textContent = fmt(expense);
+  const balEl = document.getElementById('home-balance');
+  if (balance !== null) {
+    balEl.textContent = fmt(balance);
+    balEl.style.color = balance >= 0 ? '#80DEEA' : '#FF8A65';
+  } else { balEl.textContent = '—'; }
+  document.getElementById('home-camp').textContent = fmt(campExp);
+
+  // Fixed costs (housing + utility)
+  const utility = getFixedUtility(currentYear, currentMonth);
+  const housing = getFixedHousing(currentYear, currentMonth);
+  document.getElementById('home-fixed').textContent = fmt((utility || 0) + (housing || 0));
+
+  // Prev month
+  let prevY = currentYear, prevM = currentMonth - 1;
+  if (prevM < 1) { prevM = 12; prevY--; }
+  const prevTxs = getMonthTx(prevY, prevM);
+
+  // Budget targets
+  const FOOD_BUDGET    = 80000;
+  const CONSUME_BUDGET = 10000;
+
+  // Food box card summary (top-level numbers)
+  const foodTotalForBox = txs.filter(t => t.category === '食' || t.category === 'コ').reduce((s,t)=>s+t.amount,0);
+  const consumeForBox   = txs.filter(t => t.category === '日').reduce((s,t)=>s+t.amount,0);
+  const prevFoodForBox  = prevTxs.filter(t => t.category === '食' || t.category === 'コ').reduce((s,t)=>s+t.amount,0);
+  const foodPct  = Math.min(100, Math.round(foodTotalForBox / FOOD_BUDGET * 100));
+  const foodDiff = prevFoodForBox ? foodTotalForBox - prevFoodForBox : 0;
+  document.getElementById('food-box-total').textContent   = fmt(foodTotalForBox);
+  document.getElementById('food-box-consume').textContent = fmt(consumeForBox);
+  document.getElementById('food-box-bar').style.width     = foodPct + '%';
+  document.getElementById('food-box-diff').textContent    = prevFoodForBox
+    ? (foodDiff > 0 ? `▲ ${fmt(foodDiff)} 前月比増` : `▼ ${fmt(Math.abs(foodDiff))} 前月比減`)
+    : '前月データなし';
+
+  // ===== Food focus card =====
+  // Grocery (スーパー系 = 食カテゴリ for non-eating-out)
+  const EATING_OUT_SHOPS = ['外食','軽食','パン屋'];
+  const groceryTxs    = txs.filter(t => t.category === '食' && !EATING_OUT_SHOPS.includes(t.shop));
+  const eatingOutTxs  = txs.filter(t => t.category === '食' && EATING_OUT_SHOPS.includes(t.shop)
+                                      || (t.category === '食' && t.purpose && ['外食','ラーメン','焼肉屋','うどん','パン屋','定食','パスタ','その他'].includes(t.purpose)));
+  const conveniTxs    = txs.filter(t => t.category === 'コ');
+  const consumableTxs = txs.filter(t => t.category === '日');
+
+  // Deduplicate — grocery = 食 not in eatingOut set
+  const eatingOutIds = new Set(eatingOutTxs.map(t => t.id));
+  const groceryOnlyTxs = groceryTxs.filter(t => !eatingOutIds.has(t.id));
+
+  const groceryAmt   = groceryOnlyTxs.reduce((s, t) => s + t.amount, 0);
+  const eatingOutAmt = eatingOutTxs.reduce((s, t) => s + t.amount, 0);
+  const conveniAmt   = conveniTxs.reduce((s, t) => s + t.amount, 0);
+  const consumableAmt= consumableTxs.reduce((s, t) => s + t.amount, 0);
+  const totalFoodAmt = groceryAmt + eatingOutAmt + conveniAmt;
+
+  // prev month same calcs
+  const prevGrocery    = prevTxs.filter(t => t.category === '食' && !EATING_OUT_SHOPS.includes(t.shop)).reduce((s,t)=>s+t.amount,0);
+  const prevEatingOut  = prevTxs.filter(t => t.category === '食' && (EATING_OUT_SHOPS.includes(t.shop) || ['外食','ラーメン','焼肉屋','うどん','パン屋','定食','パスタ','その他'].includes(t.purpose))).reduce((s,t)=>s+t.amount,0);
+  const prevConveni    = prevTxs.filter(t => t.category === 'コ').reduce((s,t)=>s+t.amount,0);
+  const prevConsumable = prevTxs.filter(t => t.category === '日').reduce((s,t)=>s+t.amount,0);
+  const prevTotalFood  = prevGrocery + prevEatingOut + prevConveni;
+
+  function diffBadge(cur, prev) {
+    if (!prev || !cur) return '';
+    const d = cur - prev;
+    const pct = Math.round(Math.abs(d) / prev * 100);
+    return d > 0
+      ? `<span class="food-stat-diff-up">▲${pct}% 前月比</span>`
+      : `<span class="food-stat-diff-down">▼${pct}% 前月比</span>`;
+  }
+
+  // Budget targets are declared above
+
+  function progressBar(amt, budget, color) {
+    const pct = Math.min(100, Math.round(amt / budget * 100));
+    const c = pct > 90 ? '#E53935' : pct > 70 ? '#FF9800' : color;
+    return `<div style="height:8px;background:#EEE;border-radius:10px;overflow:hidden;margin:4px 0">
+      <div style="height:100%;width:${pct}%;background:${c};border-radius:10px;transition:width 0.5s"></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:0.7rem;color:var(--muted)">
+      <span>${pct}% 使用</span><span>目標 ${fmt(budget)}</span>
+    </div>`;
+  }
+
+  document.getElementById('home-food-stats').innerHTML = `
+    <!-- 食費合計 -->
+    <div class="food-stat-block" style="padding-bottom:12px;border-bottom:2px solid #FFF0E8">
+      <div class="food-stat-header">
+        <div class="food-stat-name" style="color:#FF6B35;font-size:0.95rem">🍱 食費合計</div>
+        <div class="food-stat-amount" style="color:#FF6B35">${fmt(totalFoodAmt)}</div>
+      </div>
+      ${progressBar(totalFoodAmt, FOOD_BUDGET, '#FF6B35')}
+      <div class="food-stat-meta" style="margin-top:4px">
+        <span>前月 ${fmt(prevTotalFood)}</span>
+        ${diffBadge(totalFoodAmt, prevTotalFood)}
+      </div>
+    </div>
+
+    <!-- 内訳 -->
+    <div class="food-sub-list" style="margin-top:10px">
+      <div class="food-sub-row">
+        <div class="food-sub-label"><span style="font-size:1rem">🛒</span>スーパー・食材</div>
+        <div>
+          <span class="food-sub-amt" style="color:#FF6B35">${fmt(groceryAmt)}</span>
+          <span style="font-size:0.7rem;color:var(--muted);margin-left:4px">${diffBadge(groceryAmt,prevGrocery)}</span>
+        </div>
+      </div>
+      <div class="food-sub-row">
+        <div class="food-sub-label"><span style="font-size:1rem">🍜</span>外食</div>
+        <div>
+          <span class="food-sub-amt" style="color:#FF8F00">${fmt(eatingOutAmt)}</span>
+          <span style="font-size:0.7rem;color:var(--muted);margin-left:4px">${diffBadge(eatingOutAmt,prevEatingOut)}</span>
+        </div>
+      </div>
+      <div class="food-sub-row">
+        <div class="food-sub-label"><span style="font-size:1rem">🏪</span>コンビニ</div>
+        <div>
+          <span class="food-sub-amt" style="color:#FF9800">${fmt(conveniAmt)}</span>
+          <span style="font-size:0.7rem;color:var(--muted);margin-left:4px">${diffBadge(conveniAmt,prevConveni)}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 消耗品 -->
+    <div class="food-stat-block" style="margin-top:14px;padding-top:12px;border-top:1px solid #F0F0F0">
+      <div class="food-stat-header">
+        <div class="food-stat-name" style="color:#43A047">🧹 消耗品・日用品</div>
+        <div class="food-stat-amount" style="color:#43A047">${fmt(consumableAmt)}</div>
+      </div>
+      ${progressBar(consumableAmt, CONSUME_BUDGET, '#43A047')}
+      <div class="food-stat-meta" style="margin-top:4px">
+        <span>前月 ${fmt(prevConsumable)}</span>
+        ${diffBadge(consumableAmt, prevConsumable)}
+      </div>
+    </div>
+  `;
+
+  // Buyer summary (in collapsible detail)
+  const toruExp = txs.filter(t => t.buyer === 'TORU').reduce((s, t) => s + t.amount, 0);
+  const hitomiExp = txs.filter(t => t.buyer === 'HITOMI').reduce((s, t) => s + t.amount, 0);
+  const maxBuyer = Math.max(toruExp, hitomiExp, 1);
+  const toruIncome   = incomeData ? incomeData.toru   : null;
+  const hitomiIncome = incomeData ? incomeData.hitomi : null;
+  document.getElementById('home-buyer-summary').innerHTML = `
+    <div style="font-size:0.8rem;font-weight:700;color:var(--muted);margin-bottom:10px">👫 担当者別支出</div>
+    <div class="buyer-bar-row">
+      <div class="buyer-bar-label">🧑 トオル</div>
+      <div class="buyer-bar-wrap"><div class="buyer-bar-fill" style="width:${Math.round(toruExp/maxBuyer*100)}%;background:#4FC3F7"></div></div>
+      <div class="buyer-bar-amount" style="color:#0288D1">${fmt(toruExp)}</div>
+    </div>
+    ${toruIncome ? `<div style="font-size:0.72rem;color:var(--muted);margin:-4px 0 10px 78px">手取り ${fmt(toruIncome)} → 残 ${fmt(toruIncome - toruExp)}</div>` : ''}
+    <div class="buyer-bar-row">
+      <div class="buyer-bar-label">👩 ひとみ</div>
+      <div class="buyer-bar-wrap"><div class="buyer-bar-fill" style="width:${Math.round(hitomiExp/maxBuyer*100)}%;background:#FF8A65"></div></div>
+      <div class="buyer-bar-amount" style="color:#E64A19">${fmt(hitomiExp)}</div>
+    </div>
+    ${hitomiIncome ? `<div style="font-size:0.72rem;color:var(--muted);margin:-4px 0 0 78px">手取り ${fmt(hitomiIncome)} → 残 ${fmt(hitomiIncome - hitomiExp)}</div>` : ''}
+  `;
+
+  // Donut
+  const catTotals = {};
+  txs.forEach(t => { catTotals[t.category] = (catTotals[t.category] || 0) + t.amount; });
+  const sorted = Object.entries(catTotals).sort((a, b) => b[1] - a[1]).slice(0, 7);
+  destroyChart('homeDonutChart');
+  const ctx = document.getElementById('homeDonutChart').getContext('2d');
+  charts['homeDonutChart'] = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: sorted.map(([c]) => getCatConf(c).emoji + ' ' + getCatConf(c).label),
+      datasets: [{ data: sorted.map(([,v]) => v), backgroundColor: sorted.map(([c]) => getCatConf(c).color), borderWidth: 3, borderColor: '#fff', hoverOffset: 8 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, cutout: '62%',
+      plugins: {
+        legend: { position: 'right', labels: { font: { size: 11, family: "'Zen Maru Gothic'" }, boxWidth: 12, padding: 10 } },
+        tooltip: { callbacks: { label: ctx => ctx.label + ': ' + fmt(ctx.raw) } }
+      }
+    }
+  });
+
+  // Recent
+  const recent = [...txs].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 6);
+  document.getElementById('home-recent').innerHTML = recent.length
+    ? recent.map(t => renderTxItem(t)).join('')
+    : '<div class="empty-state"><div class="emoji">📭</div><p>今月の支出はまだありません</p></div>';
+}
+
+function toggleFinanceDetail() {
+  const detail = document.getElementById('homeFinanceDetail');
+  const toggle = document.getElementById('hfbToggle');
+  const isOpen = detail.style.display !== 'none';
+  detail.style.display = isOpen ? 'none' : 'block';
+  toggle.classList.toggle('open', !isOpen);
+}
+
+function toggleFoodDetail() {
+  const panel  = document.getElementById('foodDetailPanel');
+  const toggle = document.getElementById('foodBoxToggle');
+  const isOpen = panel.style.display !== 'none';
+  panel.style.display = isOpen ? 'none' : 'block';
+  toggle.classList.toggle('open', !isOpen);
+}
+
+function toggleExtraIncome() {
+  const fields = document.getElementById('extraIncomeFields');
+  const btn    = document.getElementById('extraIncomeToggle');
+  const isOpen = fields.style.display !== 'none';
+  fields.style.display = isOpen ? 'none' : 'block';
+  btn.textContent = isOpen ? '▼ 展開' : '▲ 閉じる';
+  if (!isOpen) updateIncomeTotals();
+}
+// ===== LIST =====
+function toggleBuyerFilter(buyer) {
+  buyerFilter = buyerFilter === buyer ? null : buyer;
+  document.getElementById('filterTORU').classList.toggle('active', buyerFilter === 'TORU');
+  document.getElementById('filterHITOMI').classList.toggle('active', buyerFilter === 'HITOMI');
+  renderList();
+}
+
+function toggleTypeFilter(type) {
+  typeFilter = typeFilter === type ? null : type;
+  document.getElementById('filterFixed').classList.toggle('active', typeFilter === 'fixed');
+  document.getElementById('filterYearly').classList.toggle('active', typeFilter === 'yearly');
+  renderList();
+}
+
+function renderList() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  let txs = getMonthTx(currentYear, currentMonth).filter(t => t.category !== '');
+
+  if (buyerFilter) txs = txs.filter(t => t.buyer === buyerFilter);
+  if (typeFilter)  txs = txs.filter(t => t.txType === typeFilter);
+  if (q) txs = txs.filter(t =>
+    (t.shop||'').toLowerCase().includes(q) ||
+    (t.memo||'').toLowerCase().includes(q) ||
+    (t.purpose||'').toLowerCase().includes(q) ||
+    getCatConf(t.category).label.includes(q)
+  );
+
+  txs.sort((a, b) => b.date.localeCompare(a.date));
+
+  if (!txs.length) {
+    document.getElementById('txList').innerHTML = '<div class="empty-state"><div class="emoji">🔍</div><p>該当する支出が見つかりません</p></div>';
+    return;
+  }
+
+  // Group by date
+  const groups = {};
+  txs.forEach(t => {
+    if (!groups[t.date]) groups[t.date] = [];
+    groups[t.date].push(t);
+  });
+
+  let html = '';
+  Object.entries(groups).sort((a, b) => b[0].localeCompare(a[0])).forEach(([date, items]) => {
+    const dayTotal = items.reduce((s, t) => s + t.amount, 0);
+    const d = new Date(date);
+    const days = ['日', '月', '火', '水', '木', '金', '土'];
+    const dow = days[d.getDay()];
+    const isWeekend = d.getDay() === 0 || d.getDay() === 6;
+    html += `<div class="date-group-header">
+      <span style="color:${isWeekend ? '#E53935' : 'inherit'}">${date.slice(5).replace('-', '/')}（${dow}）</span>
+      <span class="day-total">${fmt(dayTotal)}</span>
+    </div>`;
+    items.forEach(t => { html += renderTxItem(t); });
+  });
+
+  document.getElementById('txList').innerHTML = html;
+}
+
+function renderTxItem(t) {
+  const c = getCatConf(t.category);
+  const campMark    = isCamp(t) ? '<span class="camp-tag">⛺キャンプ</span>' : '';
+  const fixedMark   = t.txType === 'fixed'  ? '<span class="txtype-tag-fixed">🔁固定費</span>' : '';
+  const yearlyMark  = t.txType === 'yearly' ? '<span class="txtype-tag-yearly">📅年払い</span>' : '';
+  const confirmMark = `<span class="confirm-tag ${t.confirm === '確定' ? 'confirmed' : 'pending'}">${t.confirm}</span>`;
+  const buyerLabel  = t.buyer === 'TORU' ? '🧑トオル' : t.buyer === 'HITOMI' ? '👩ひとみ' : '';
+  const memo = t.memo ? `・${t.memo}` : '';
+  return `<div class="tx-item" onclick="openEditModal('${t.id}')">
+    <div class="cat-badge" style="background:${c.bg};color:${c.color}">${c.emoji}</div>
+    <div class="tx-info">
+      <div class="tx-shop">${t.shop || c.label}${t.purpose ? ' <span style="font-weight:400;font-size:0.8em;color:#999">・' + t.purpose + '</span>' : ''}</div>
+      <div class="tx-meta">${confirmMark}${campMark}${fixedMark}${yearlyMark}<span>${buyerLabel}${memo}</span></div>
+    </div>
+    <div class="tx-amount">${fmt(t.amount)}</div>
+  </div>`;
+}
+
+// ===== STATS =====
+function renderStats() {
+  // Monthly trend — income vs expense
+  const allMonths = [];
+  // 2025 Nov-Dec + 2026 Jan-current
+  [[2025,11],[2025,12]].forEach(([y,m]) => {
+    const txs = getMonthTx(y, m);
+    const inc = getMonthIncome(y, m);
+    allMonths.push({
+      label: (y-2000) + '/' + m + '月',
+      expense: txs.reduce((s,t) => s+t.amount, 0),
+      income: inc ? inc.total : 0
+    });
+  });
+  for (let m = 1; m <= currentMonth; m++) {
+    const txs = getMonthTx(currentYear, m);
+    const inc = getMonthIncome(currentYear, m);
+    allMonths.push({
+      label: '26/' + m + '月',
+      expense: txs.reduce((s,t) => s+t.amount, 0),
+      income: inc ? inc.total : 0
+    });
+  }
+
+  destroyChart('monthlyChart');
+  const ctx1 = document.getElementById('monthlyChart').getContext('2d');
+  charts['monthlyChart'] = new Chart(ctx1, {
+    type: 'bar',
+    data: {
+      labels: allMonths.map(m => m.label),
+      datasets: [
+        {
+          label: '手取り収入',
+          data: allMonths.map(m => m.income),
+          backgroundColor: 'rgba(67,160,71,0.7)',
+          borderRadius: 6, borderSkipped: false,
+        },
+        {
+          label: '支出',
+          data: allMonths.map(m => m.expense),
+          backgroundColor: 'rgba(255,107,53,0.85)',
+          borderRadius: 6, borderSkipped: false,
+        }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { labels: { font: { size: 11, family: "'Zen Maru Gothic'" } } },
+        tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + fmt(ctx.raw) } }
+      },
+      scales: {
+        y: { ticks: { callback: v => '¥' + (v/1000) + 'k' }, grid: { color: '#F0F0F0' } },
+        x: { grid: { display: false } }
+      }
+    }
+  });
+
+  // Buyer chart
+  const curTxs = getMonthTx(currentYear, currentMonth);
+  const toruTotal = curTxs.filter(t => t.buyer === 'TORU').reduce((s, t) => s + t.amount, 0);
+  const hitomiTotal = curTxs.filter(t => t.buyer === 'HITOMI').reduce((s, t) => s + t.amount, 0);
+  const curIncome = getMonthIncome(currentYear, currentMonth);
+
+  destroyChart('buyerChart');
+  const ctx2 = document.getElementById('buyerChart').getContext('2d');
+  charts['buyerChart'] = new Chart(ctx2, {
+    type: 'bar',
+    data: {
+      labels: ['トオル', 'ひとみ'],
+      datasets: [
+        { label: '手取り収入', data: [curIncome ? curIncome.toru : 0, curIncome ? curIncome.hitomi : 0], backgroundColor: 'rgba(67,160,71,0.6)', borderRadius: 8 },
+        { label: '支出', data: [toruTotal, hitomiTotal], backgroundColor: ['rgba(79,195,247,0.9)', 'rgba(255,138,101,0.9)'], borderRadius: 8 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+      plugins: {
+        legend: { labels: { font: { size: 11, family: "'Zen Maru Gothic'" } } },
+        tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + fmt(ctx.raw) } }
+      },
+      scales: {
+        x: { ticks: { callback: v => '¥' + (v/1000) + 'k' }, grid: { color: '#F0F0F0' } },
+        y: { grid: { display: false } }
+      }
+    }
+  });
+
+  // Cat breakdown
+  const catTotals = {};
+  const total = curTxs.reduce((s, t) => { catTotals[t.category] = (catTotals[t.category]||0) + t.amount; return s + t.amount; }, 0);
+  const sorted = Object.entries(catTotals).sort((a, b) => b[1] - a[1]);
+  document.getElementById('catBreakdown').innerHTML = sorted.map(([cat, amt]) => {
+    const c = getCatConf(cat);
+    const pct = total ? Math.round(amt / total * 100) : 0;
+    return `<div class="stat-row">
+      <div class="stat-row-label"><span style="font-size:1.1rem">${c.emoji}</span>${c.label}</div>
+      <div><span class="stat-amount">${fmt(amt)}</span><span class="stat-pct">${pct}%</span></div>
+    </div>`;
+  }).join('');
+}
+
+// ===== CAMP =====
+// ===== ENJOY sub-category classification =====
+const ENJOY_GENRES = [
+  { key: 'camp',    label: 'キャンプ',     color: '#43A047', emoji: '⛺',
+    match: t => t.shop === 'キャンプ場' || (t.memo && t.memo.includes('キャンプ')) || (t.shop && t.shop.includes('キャンプ')) },
+  { key: 'ski',     label: 'スキー',       color: '#29B6F6', emoji: '⛷️',
+    match: t => t.shop === 'スキー場' || (t.shop && t.shop.includes('スキー')) },
+  { key: 'concert', label: 'コンサート',   color: '#EC407A', emoji: '🎵',
+    match: t => t.shop === 'コンサート' || (t.memo && (t.memo.includes('コンサート') || t.memo.includes('スカパラ') || t.memo.includes('怪談'))) },
+  { key: 'travel',  label: '旅行',         color: '#FF7043', emoji: '✈️',
+    match: t => t.memo && (t.memo.includes('旅行') || t.memo.includes('ホテル') || t.memo.includes('温泉')) },
+  { key: 'movie',   label: '映画・観劇',   color: '#AB47BC', emoji: '🎬',
+    match: t => t.shop === '映画館' || (t.memo && (t.memo.includes('映画') || t.memo.includes('観劇'))) },
+  { key: 'other',   label: 'その他娯楽',   color: '#78909C', emoji: '🎪',
+    match: () => true },
+];
+
+function classifyEnjoy(t) {
+  for (const g of ENJOY_GENRES) { if (g.match(t)) return g; }
+  return ENJOY_GENRES[ENJOY_GENRES.length - 1];
+}
+
+function renderCamp() {
+  const enjoyTxs = transactions.filter(isEnjoy);
+  const total = enjoyTxs.reduce((s, t) => s + t.amount, 0);
+
+  const monthGroups = {};
+  enjoyTxs.forEach(t => {
+    const key = t.date.slice(0, 7);
+    if (!monthGroups[key]) monthGroups[key] = [];
+    monthGroups[key].push(t);
+  });
+
+  const monthKeys = Object.keys(monthGroups).sort();
+  const monthCount = monthKeys.length;
+  const monthTotals = monthKeys.map(k => monthGroups[k].reduce((s, t) => s + t.amount, 0));
+  const maxMonthTotal = Math.max(...monthTotals, 1);
+  const avgPerMonth = monthCount ? Math.round(total / monthCount) : 0;
+
+  document.getElementById('camp-total').textContent = fmt(total);
+  document.getElementById('camp-count').textContent = enjoyTxs.length + '件';
+  document.getElementById('camp-avg').textContent = fmt(avgPerMonth);
+  document.getElementById('camp-max').textContent = fmt(maxMonthTotal);
+
+  // Legend
+  document.getElementById('enjoyLegend').innerHTML = ENJOY_GENRES.map(g =>
+    `<div class="enjoy-legend-item">
+      <div class="enjoy-legend-dot" style="background:${g.color}"></div>
+      <span>${g.emoji} ${g.label}</span>
+    </div>`
+  ).join('');
+
+  // Stacked bar chart by genre x month
+  destroyChart('campMonthlyChart');
+  const ctx = document.getElementById('campMonthlyChart').getContext('2d');
+  charts['campMonthlyChart'] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: monthKeys.map(k => k.replace('-', '/')),
+      datasets: ENJOY_GENRES.map(g => ({
+        label: g.emoji + ' ' + g.label,
+        data: monthKeys.map(k =>
+          monthGroups[k].filter(t => classifyEnjoy(t).key === g.key)
+                        .reduce((s, t) => s + t.amount, 0) || null
+        ),
+        backgroundColor: g.color,
+        borderRadius: 4,
+      }))
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + fmt(ctx.raw) } }
+      },
+      scales: {
+        x: { stacked: true, grid: { display: false } },
+        y: { stacked: true, ticks: { callback: v => '¥' + Math.round(v/1000) + 'k' }, grid: { color: '#F0F0F0' } }
+      }
+    }
+  });
+
+  // Pie chart by genre (all time)
+  const genreTotals = ENJOY_GENRES.map(g => ({
+    ...g, total: enjoyTxs.filter(t => classifyEnjoy(t).key === g.key).reduce((s, t) => s + t.amount, 0)
+  })).filter(g => g.total > 0);
+
+  destroyChart('enjoyPieChart');
+  const ctx2 = document.getElementById('enjoyPieChart').getContext('2d');
+  charts['enjoyPieChart'] = new Chart(ctx2, {
+    type: 'doughnut',
+    data: {
+      labels: genreTotals.map(g => g.emoji + ' ' + g.label),
+      datasets: [{ data: genreTotals.map(g => g.total), backgroundColor: genreTotals.map(g => g.color), borderWidth: 3, borderColor: '#fff', hoverOffset: 8 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, cutout: '58%',
+      plugins: {
+        legend: { position: 'right', labels: { font: { size: 11, family: "'Zen Maru Gothic'" }, boxWidth: 12, padding: 10 } },
+        tooltip: { callbacks: { label: ctx => ctx.label + ': ' + fmt(ctx.raw) } }
+      }
+    }
+  });
+
+  // Monthly summary cards
+  document.getElementById('campTrips').innerHTML = monthKeys.slice().reverse().map(month => {
+    const items = monthGroups[month];
+    const monthTotal = items.reduce((s, t) => s + t.amount, 0);
+    const byGenre = ENJOY_GENRES.map(g => {
+      const gItems = items.filter(t => classifyEnjoy(t).key === g.key);
+      return { ...g, items: gItems, total: gItems.reduce((s, t) => s + t.amount, 0) };
+    }).filter(g => g.items.length > 0);
+    const [y, m] = month.split('-');
+    const genreRows = byGenre.map(g => {
+      const names = [...new Set(g.items.map(t => (t.memo || t.shop || '').trim()).filter(Boolean))].slice(0, 3).join('・');
+      return `<div class="enjoy-genre-row">
+        <div class="enjoy-genre-dot" style="background:${g.color}"></div>
+        <div class="enjoy-genre-name">${g.emoji} ${g.label}</div>
+        <div class="enjoy-genre-items">${names}</div>
+        <div class="enjoy-genre-amt">${fmt(g.total)}</div>
+      </div>`;
+    }).join('');
+    return `<div class="enjoy-month-card">
+      <div class="enjoy-month-header">
+        <span class="enjoy-month-title">🎉 ${y}年${parseInt(m)}月のENJOY</span>
+        <span class="enjoy-month-total">${fmt(monthTotal)}</span>
+      </div>
+      ${genreRows}
+      <div style="font-size:0.72rem;color:var(--muted);margin-top:8px">合計 ${items.length}件の支出</div>
+    </div>`;
+  }).join('') || '<div class="empty-state"><div class="emoji">🎉</div><p>ENJOYの記録がまだありません</p></div>';
+
+  // Budget
+  const yearBudget = 200000;
+  const yearUsed = transactions.filter(t => isEnjoy(t) && t.date.startsWith(String(currentYear))).reduce((s, t) => s + t.amount, 0);
+  const pct = Math.min(100, Math.round(yearUsed / yearBudget * 100));
+  const bcolor = pct > 80 ? '#E53935' : pct > 60 ? '#FF9800' : '#43A047';
+  document.getElementById('campBudget').innerHTML = `
+    <div class="budget-bar-wrap">
+      <div class="budget-label">
+        <span>${currentYear}年 年間ENJOY予算</span>
+        <span style="color:${bcolor}">${fmt(yearUsed)} / ${fmt(yearBudget)}</span>
+      </div>
+      <div class="budget-bar"><div class="budget-fill" style="width:${pct}%;background:${bcolor}"></div></div>
+    </div>
+    <p style="font-size:0.8rem;color:var(--muted);margin-top:8px">残り予算: ${fmt(yearBudget - yearUsed)}（使用率 ${pct}%）</p>
+  `;
+}
+
+// ===== ANNUAL =====
+function renderAnnual() {
+  const months = [];
+  for (let m = 1; m <= 12; m++) {
+    const txs = getMonthTx(currentYear, m);
+    const inc = getMonthIncome(currentYear, m);
+    const expense = txs.reduce((s, t) => s + t.amount, 0);
+    const income = inc ? inc.total : 0;
+    months.push({ label: m + '月', expense, income, balance: income - expense, count: txs.length });
+  }
+
+  // Income vs Expense line
+  destroyChart('annualChart');
+  const ctx = document.getElementById('annualChart').getContext('2d');
+  charts['annualChart'] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: months.map(m => m.label),
+      datasets: [
+        {
+          type: 'line',
+          label: '手取り収入',
+          data: months.map(m => m.income || null),
+          borderColor: '#43A047', backgroundColor: 'rgba(67,160,71,0.1)',
+          borderWidth: 3, pointBackgroundColor: '#43A047', pointRadius: 5,
+          fill: false, tension: 0.3, yAxisID: 'y'
+        },
+        {
+          label: '支出',
+          data: months.map(m => m.expense || null),
+          backgroundColor: months.map(m => m.balance >= 0 ? 'rgba(255,107,53,0.75)' : 'rgba(229,57,53,0.85)'),
+          borderRadius: 6, yAxisID: 'y'
+        }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { labels: { font: { size: 11, family: "'Zen Maru Gothic'" } } },
+        tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + fmt(ctx.raw) } }
+      },
+      scales: {
+        y: { ticks: { callback: v => '¥' + Math.round(v/1000) + 'k' }, grid: { color: '#F0F0F0' } },
+        x: { grid: { display: false } }
+      }
+    }
+  });
+
+  // Utility chart
+  const utilData = months.map(m => {
+    const f = getMonthFixed(currentYear, parseInt(m.label));
+    return { label: m.label, elec: f['電気代']||0, gas: f['ガス代']||0, water: f['水道代']||0 };
+  });
+
+  destroyChart('utilityChart');
+  const ctx2 = document.getElementById('utilityChart').getContext('2d');
+  charts['utilityChart'] = new Chart(ctx2, {
+    type: 'bar',
+    data: {
+      labels: utilData.map(m => m.label),
+      datasets: [
+        { label: '電気代', data: utilData.map(m => m.elec||null), backgroundColor: '#FFC107', borderRadius: 4 },
+        { label: 'ガス代', data: utilData.map(m => m.gas||null), backgroundColor: '#FF7043', borderRadius: 4 },
+        { label: '水道代', data: utilData.map(m => m.water||null), backgroundColor: '#29B6F6', borderRadius: 4 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { labels: { font: { size: 11, family: "'Zen Maru Gothic'" } } },
+        tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + fmt(ctx.raw) } }
+      },
+      scales: {
+        x: { stacked: true, grid: { display: false } },
+        y: { stacked: true, ticks: { callback: v => '¥' + (v/1000) + 'k' }, grid: { color: '#F0F0F0' } }
+      }
+    }
+  });
+
+  // Income breakdown (toru vs hitomi)
+  const incBreakData = months.filter(m => {
+    const inc = getMonthIncome(currentYear, parseInt(m.label));
+    return inc && inc.total > 0;
+  }).map(m => {
+    const inc = getMonthIncome(currentYear, parseInt(m.label));
+    return { label: m.label, toru: inc.toru, hitomi: inc.hitomi };
+  });
+
+  destroyChart('incomeBreakdownChart');
+  const ctx3 = document.getElementById('incomeBreakdownChart').getContext('2d');
+  charts['incomeBreakdownChart'] = new Chart(ctx3, {
+    type: 'bar',
+    data: {
+      labels: incBreakData.map(m => m.label),
+      datasets: [
+        { label: 'トオル', data: incBreakData.map(m => m.toru), backgroundColor: 'rgba(79,195,247,0.85)', borderRadius: 6 },
+        { label: 'ひとみ', data: incBreakData.map(m => m.hitomi), backgroundColor: 'rgba(255,138,101,0.85)', borderRadius: 6 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { labels: { font: { size: 11, family: "'Zen Maru Gothic'" } } },
+        tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + fmt(ctx.raw) } }
+      },
+      scales: {
+        x: { stacked: true, grid: { display: false } },
+        y: { stacked: true, ticks: { callback: v => '¥' + Math.round(v/1000) + 'k' }, grid: { color: '#F0F0F0' } }
+      }
+    }
+  });
+
+  // Summary table
+  const maxExp = Math.max(...months.map(m => m.expense), 1);
+  document.getElementById('annualTable').innerHTML = months.map(m => {
+    const bar = Math.round(m.expense / maxExp * 100);
+    const balColor = m.balance > 0 ? '#43A047' : m.balance < 0 ? '#E53935' : '#9E9E9E';
+    const incStr = m.income ? fmt(m.income) : '—';
+    return `<div class="stat-row" style="flex-wrap:wrap;gap:4px">
+      <div class="stat-row-label" style="min-width:48px">${m.label}</div>
+      <div style="flex:1;padding:0 10px;min-width:80px">
+        <div class="budget-bar" style="height:8px"><div class="budget-fill" style="width:${bar}%;background:#FF6B35"></div></div>
+        <div style="font-size:0.68rem;color:var(--muted);margin-top:2px">支出 ${fmt(m.expense)}</div>
+      </div>
+      <div style="text-align:right;font-size:0.8rem">
+        <div style="font-size:0.72rem;color:#43A047">収入 ${incStr}</div>
+        <div style="font-weight:900;color:${balColor}">${m.income ? fmt(m.balance) : '—'}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ===== MODAL =====
+function openAddModal() {
+  editingId = null;
+  document.getElementById('editId').value = '';
+  document.getElementById('modalTitle').textContent = '✨ 支出を追加';
+  document.getElementById('deleteBtn').style.display = 'none';
+
+  const today = new Date();
+  document.getElementById('fDate').value = today.toISOString().slice(0, 10);
+  document.getElementById('fCategory').value = '';
+  document.getElementById('fShop').value = '';
+  document.getElementById('fPurpose').value = '';
+  document.getElementById('fAmount').value = '';
+  document.getElementById('fPayment').value = '現金';
+  document.getElementById('fBuyer').value = 'HITOMI';
+  document.getElementById('fConfirm').value = '保留';
+  document.getElementById('fMemo').value = '';
+  selectTxType('normal');
+  renderQuickCats('');
+  populateDataLists('');
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function openEditModal(id) {
+  const t = transactions.find(x => x.id === id);
+  if (!t) return;
+  editingId = id;
+  document.getElementById('editId').value = id;
+  document.getElementById('modalTitle').textContent = '✏️ 支出を編集';
+  document.getElementById('deleteBtn').style.display = 'block';
+
+  document.getElementById('fDate').value = t.date;
+  document.getElementById('fCategory').value = t.category;
+  document.getElementById('fShop').value = t.shop;
+  document.getElementById('fPurpose').value = t.purpose;
+  document.getElementById('fAmount').value = t.amount;
+  document.getElementById('fPayment').value = t.payment;
+  document.getElementById('fBuyer').value = t.buyer || 'HITOMI';
+  document.getElementById('fConfirm').value = t.confirm;
+  document.getElementById('fMemo').value = t.memo;
+  selectTxType(t.txType || 'normal');
+  renderQuickCats(t.category);
+  populateDataLists(t.category);
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function selectTxType(type) {
+  document.getElementById('fTxType').value = type;
+  ['normal','fixed','yearly'].forEach(t => {
+    document.getElementById('chip-' + t).classList.toggle('active', t === type);
+  });
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+}
+
+function handleModalClick(e) {
+  if (e.target === document.getElementById('modalOverlay')) closeModal();
+}
+
+// ===== PURPOSE MASTER =====
+const PURPOSE_MASTER_KEY = 'kakeibo_purpose_master_v1';
+const SHOP_MASTER_KEY = 'kakeibo_shop_master_v1';
+
+// Default purposes per category (from Excel リスト sheet data)
+const DEFAULT_PURPOSES = {
+  '食': ['食料品', '外食', 'うどん', 'ラーメン', '焼肉屋', 'パン屋', '定食', 'パスタ', '間食', '軽食', 'その他'],
+  'コ': ['朝食', '昼食', '夕食', '間食', 'その他'],
+  'ス': ['ガソリン', '灯油', '洗車', '整備'],
+  '住': ['家電', '消耗品', '日用品', 'その他'],
+  '車': ['消耗品', '工賃', '小物', '整備', '洗車'],
+  '衣': ['洋服', '小物', 'アクセサリー', 'その他'],
+  '美': ['カット', 'カラー', 'パーマ', 'その他'],
+  '医': ['治療', '定期健診', '薬', 'その他'],
+  '日': ['日用品', '洗剤', 'その他'],
+  '交': ['高速代', '電車', 'バス', 'タクシー'],
+  '娯': ['消耗品', '雑貨', 'チケット', 'その他'],
+  'ネ': ['日用品', 'ガジェット', '衣類', 'その他'],
+  '駐': ['コインパーキング', 'その他'],
+  '季': ['お年玉', 'お祝い', 'お土産', 'その他'],
+  'チ': ['チャージ'],
+  '税': ['住民税', '自動車税', 'その他'],
+};
+
+let purposeMaster = {};
+let shopMaster = {};  // { '食': ['マルナカ', 'イオン倉敷', ...], 'ス': ['出光', ...], ... }
+let activeShopCat = '食';  // currently selected tab in admin
+
+function loadPurposeMaster() {
+  try {
+    const saved = localStorage.getItem(PURPOSE_MASTER_KEY);
+    purposeMaster = saved ? JSON.parse(saved) : JSON.parse(JSON.stringify(DEFAULT_PURPOSES));
+  } catch(e) { purposeMaster = JSON.parse(JSON.stringify(DEFAULT_PURPOSES)); }
+}
+function _savePurposeLocal() {
+  try { localStorage.setItem(PURPOSE_MASTER_KEY, JSON.stringify(purposeMaster)); } catch(e) {}
+}
+function loadShopMaster() {
+  try {
+    const saved = localStorage.getItem(SHOP_MASTER_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      // Migrate old flat array format to object format
+      if (Array.isArray(parsed)) {
+        shopMaster = {};
+        parsed.forEach(shop => {
+          const cat = transactions.find(t => t.shop === shop)?.category || 'その他';
+          if (!shopMaster[cat]) shopMaster[cat] = [];
+          if (!shopMaster[cat].includes(shop)) shopMaster[cat].push(shop);
+        });
+      } else {
+        shopMaster = parsed;
+      }
+      return;
+    }
+    // Build from transactions grouped by category
+    shopMaster = {};
+    transactions.forEach(t => {
+      if (!t.shop) return;
+      const cat = t.category || 'その他';
+      if (!shopMaster[cat]) shopMaster[cat] = [];
+      if (!shopMaster[cat].includes(t.shop)) shopMaster[cat].push(t.shop);
+    });
+    Object.keys(shopMaster).forEach(cat => shopMaster[cat].sort());
+  } catch(e) { shopMaster = {}; }
+}
+function _saveShopLocal() {
+  try { localStorage.setItem(SHOP_MASTER_KEY, JSON.stringify(shopMaster)); } catch(e) {}
+}
+
+function getPurposesForCat(cat) {
+  const master = purposeMaster[cat] || [];
+  // Also include any used in past transactions for this cat (learned)
+  const used = [...new Set(transactions.filter(t => t.category === cat).map(t => t.purpose).filter(Boolean))];
+  const combined = [...new Set([...master, ...used])];
+  return combined;
+}
+
+function renderPurposeChips(cat, selectedPurpose) {
+  const purposes = getPurposesForCat(cat);
+  if (!purposes.length) {
+    document.getElementById('purposeChips').innerHTML = '';
+    return;
+  }
+  document.getElementById('purposeChips').innerHTML = purposes.map(p =>
+    `<button type="button" class="purpose-chip ${p === selectedPurpose ? 'selected' : ''}"
+      onclick="selectPurpose('${p.replace(/'/g, "\\'")}' )">${p}</button>`
+  ).join('');
+}
+
+function selectPurpose(p) {
+  document.getElementById('fPurpose').value = p;
+  const cat = document.getElementById('fCategory').value;
+  renderPurposeChips(cat, p);
+}
+
+function onPurposeInput(val) {
+  const cat = document.getElementById('fCategory').value;
+  renderPurposeChips(cat, val);
+  // Learn: if user types and it's not in master yet, remember for later save
+}
+
+function learnPurpose(cat, purpose) {
+  if (!cat || !purpose) return;
+  if (!purposeMaster[cat]) purposeMaster[cat] = [];
+  if (!purposeMaster[cat].includes(purpose)) {
+    purposeMaster[cat].push(purpose);
+    savePurposeMaster();
+  }
+}
+
+function renderQuickCats(selected) {
+  const frequent = ['食', 'コ', 'ス', '娯', '住', '車', '衣', '医', '日'];
+  document.getElementById('quickCats').innerHTML = frequent.map(cat => {
+    const c = getCatConf(cat);
+    const isSel = cat === selected;
+    return `<div class="quick-cat ${isSel ? 'selected' : ''}" 
+      style="background:${isSel ? c.color : c.bg};color:${isSel ? '#fff' : c.color};border-color:${c.color}"
+      onclick="selectCat('${cat}')">${c.emoji} ${c.label}</div>`;
+  }).join('');
+
+  const sel = document.getElementById('fCategory');
+  sel.innerHTML = '<option value="">選択してください</option>' +
+    Object.entries(CAT_CONFIG).map(([k, v]) =>
+      `<option value="${k}" ${k === selected ? 'selected' : ''}>${v.emoji} ${v.label}</option>`
+    ).join('');
+
+  // Update purpose chips when category changes
+  const currentPurpose = document.getElementById('fPurpose').value;
+  renderPurposeChips(selected, currentPurpose);
+}
+
+function selectCat(cat) {
+  document.getElementById('fCategory').value = cat;
+  document.getElementById('fPurpose').value = '';
+  renderQuickCats(cat);
+  populateDataLists(cat);
+}
+
+function onCatChange(val) {
+  document.getElementById('fPurpose').value = '';
+  renderQuickCats(val);
+  populateDataLists(val);
+}
+
+function populateDataLists(cat) {
+  // Show shops for selected category first, then others from transactions
+  const catShops = shopMaster[cat] || [];
+  const txShops  = [...new Set(transactions.filter(t => t.category === cat).map(t => t.shop).filter(Boolean))];
+  const allShops = [...new Set([...catShops, ...txShops])].sort();
+  const el = document.getElementById('shopList');
+  if (el) el.innerHTML = allShops.map(s => `<option value="${s}">`).join('');
+}
+
+// ===== ADMIN PAGE =====
+function renderAdmin() {
+  renderPurposeMasterSection();
+  renderShopMasterList();
+}
+
+async function adminUpload() {
+  const el = document.getElementById('adminSyncStatus');
+  el.textContent = '⏳ アップロード中…';
+  el.style.color = '#1565C0';
+  try {
+    await gasWrite();
+    el.textContent = '✅ クラウドへの保存完了！';
+    el.style.color = '#2E7D32';
+    setSyncStatus('ok', '保存完了 ' + new Date().toLocaleTimeString('ja-JP', {hour:'2-digit',minute:'2-digit'}));
+    showToast('☁️ クラウドへのアップロード完了！');
+  } catch(e) {
+    console.warn('adminUpload failed:', e);
+    el.textContent = '⚠️ 失敗しました: ' + e.message;
+    el.style.color = '#C62828';
+  }
+}
+
+async function gasWrite() {
+  // Delegate to Firebase saveToSheets
+  return saveToSheets();
+}
+
+async function adminDownload() {
+  const el = document.getElementById('adminSyncStatus');
+  el.textContent = '⏳ ダウンロード中…';
+  el.style.color = '#1565C0';
+  const loaded = await loadFromSheets();
+  if (loaded) {
+    el.textContent = '✅ クラウドから読み込み完了！';
+    el.style.color = '#2E7D32';
+    renderPage('admin');
+    showToast('🔄 クラウドから最新データを取得しました');
+  } else {
+    el.textContent = '⚠️ データなし、または接続失敗';
+    el.style.color = '#C62828';
+  }
+}
+
+function renderPurposeMasterSection() {
+  const cats = Object.keys(CAT_CONFIG);
+  document.getElementById('purposeMasterSection').innerHTML = cats.map(cat => {
+    const c = getCatConf(cat);
+    const purposes = purposeMaster[cat] || [];
+    return `<div class="purpose-master-cat">
+      <div class="purpose-master-cat-header">
+        <span style="font-size:1.2rem">${c.emoji}</span>
+        <span style="color:${c.color}">${c.label}</span>
+        <span style="font-size:0.72rem;color:var(--muted);margin-left:auto">${purposes.length}件</span>
+      </div>
+      <div class="purpose-master-chips">
+        ${purposes.map((p, i) => `
+          <div class="purpose-master-chip" style="background:${c.bg};border-color:${c.color};color:${c.color}">
+            ${p}
+            <button class="master-del" onclick="deletePurpose('${cat}', ${i})" title="削除">×</button>
+          </div>`).join('')}
+      </div>
+      <div class="purpose-master-add">
+        <input type="text" class="purpose-master-input" id="newPurpose_${cat}"
+          placeholder="用途を追加..." onkeydown="if(event.key==='Enter')addPurpose('${cat}')">
+        <button class="btn-admin-sm" onclick="addPurpose('${cat}')">＋</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function addPurpose(cat) {
+  const input = document.getElementById('newPurpose_' + cat);
+  const val = input.value.trim();
+  if (!val) return;
+  if (!purposeMaster[cat]) purposeMaster[cat] = [];
+  if (!purposeMaster[cat].includes(val)) {
+    purposeMaster[cat].push(val);
+    savePurposeMaster();
+  }
+  input.value = '';
+  renderPurposeMasterSection();
+  showToast('✅ 用途「' + val + '」を追加しました');
+}
+
+function deletePurpose(cat, idx) {
+  purposeMaster[cat].splice(idx, 1);
+  savePurposeMaster();
+  renderPurposeMasterSection();
+}
+
+
+
+// ===== SHOP MASTER (category-based) =====
+function renderShopMasterList() {
+  const cats = Object.keys(CAT_CONFIG);
+
+  // Populate category tabs
+  document.getElementById('shopCatTabs').innerHTML = cats.map(cat => {
+    const c = getCatConf(cat);
+    const count = (shopMaster[cat] || []).length;
+    const isActive = cat === activeShopCat;
+    return `<button class="shop-cat-tab ${isActive ? 'active' : ''}"
+      style="${isActive ? `background:${c.color};border-color:${c.color}` : `border-color:${c.color};color:${c.color}`}"
+      onclick="setActiveShopCat('${cat}')">${c.emoji} ${c.label}${count ? ` <span style="opacity:0.75">${count}</span>` : ''}</button>`;
+  }).join('');
+
+  // Populate shopAddCat select
+  const sel = document.getElementById('shopAddCat');
+  if (sel) {
+    sel.innerHTML = cats.map(cat => {
+      const c = getCatConf(cat);
+      return `<option value="${cat}" ${cat === activeShopCat ? 'selected' : ''}>${c.emoji} ${c.label}</option>`;
+    }).join('');
+  }
+
+  // Show shops for active category
+  const shops = shopMaster[activeShopCat] || [];
+  const c = getCatConf(activeShopCat);
+  document.getElementById('shopMasterByCat').innerHTML = shops.length
+    ? `<div class="shop-by-cat-list">${shops.map((shop, i) =>
+        `<div class="shop-master-item">
+          <div class="shop-item-left">
+            <div class="shop-cat-badge-sm" style="background:${c.bg};color:${c.color}">${c.emoji}</div>
+            <span>${shop}</span>
+          </div>
+          <button class="master-del" onclick="deleteShopMaster('${activeShopCat}',${i})">🗑️</button>
+        </div>`).join('')}</div>`
+    : `<div style="color:var(--muted);font-size:0.82rem;padding:10px 4px">このカテゴリに購入先が登録されていません</div>`;
+}
+
+function setActiveShopCat(cat) {
+  activeShopCat = cat;
+  const sel = document.getElementById('shopAddCat');
+  if (sel) sel.value = cat;
+  renderShopMasterList();
+}
+
+function addShopMaster() {
+  const cat = (document.getElementById('shopAddCat')?.value) || activeShopCat;
+  const val = document.getElementById('newShopInput').value.trim();
+  if (!val) return;
+  if (!shopMaster[cat]) shopMaster[cat] = [];
+  if (!shopMaster[cat].includes(val)) {
+    shopMaster[cat].push(val);
+    shopMaster[cat].sort();
+    saveShopMaster();
+    showToast('🏪 購入先「' + val + '」を追加しました');
+  }
+  document.getElementById('newShopInput').value = '';
+  activeShopCat = cat;
+  renderShopMasterList();
+}
+
+function deleteShopMaster(cat, idx) {
+  if (!shopMaster[cat]) return;
+  shopMaster[cat].splice(idx, 1);
+  saveShopMaster();
+  renderShopMasterList();
+}
+
+// ===== SHOP MASTER CSV IMPORT =====
+function handleShopCsvImport(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const text = e.target.result;
+    const lines = text.split('\n').map(l => l.trim()).filter(l => l);
+    if (lines.length < 2) { showToast('⚠️ データが空です'); return; }
+
+    let imported = 0, skipped = 0, errors = [];
+    // Skip header row (row 0)
+    lines.slice(1).forEach((line, idx) => {
+      // Handle comma inside quotes, and full-width commas
+      const cols = line.replace(/，/g, ',').split(',').map(c => c.trim().replace(/^["']/,'').replace(/["']$/,''));
+      if (cols.length < 2) { skipped++; return; }
+      const cat  = cols[0].trim();
+      const shop = cols[1].trim();
+      if (!cat || !shop) { skipped++; return; }
+      if (!CAT_CONFIG[cat]) {
+        errors.push(`行${idx+2}: 「${cat}」は不明なカテゴリ記号`);
+        skipped++; return;
+      }
+      if (!shopMaster[cat]) shopMaster[cat] = [];
+      if (!shopMaster[cat].includes(shop)) {
+        shopMaster[cat].push(shop);
+        imported++;
+      } else { skipped++; }
+    });
+
+    // Sort all
+    Object.keys(shopMaster).forEach(cat => shopMaster[cat].sort());
+    saveShopMaster();
+
+    const resultEl = document.getElementById('shopImportResult');
+    resultEl.innerHTML = `<div style="background:${imported>0?'#E8F5E9':'#FFF8E1'};border-radius:10px;padding:10px 14px;font-size:0.82rem">
+      <div style="font-weight:700;margin-bottom:4px">${imported>0?'✅':'⚠️'} インポート完了</div>
+      <div>追加: <strong>${imported}件</strong>　スキップ（重複・エラー）: ${skipped}件</div>
+      ${errors.length ? `<div style="margin-top:6px;color:#E65100">${errors.slice(0,3).join('<br>')}${errors.length>3?`<br>…他${errors.length-3}件`:''}` : ''}
+    </div>`;
+    showToast(`📥 ${imported}件の購入先をインポートしました`);
+    renderShopMasterList();
+    input.value = '';
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+function downloadShopTemplate() {
+  const cats = Object.keys(CAT_CONFIG);
+  let csv = 'カテゴリ記号,購入先名\n';
+  // Add example rows
+  csv += '食,マルナカ\n食,イオン倉敷\n食,外食\nス,出光\nス,ENEOS\n車,オートバックス\n住,ケーズデンキ\n日,ダイソー\n娯,キャンプ場\n';
+  csv += '\n';
+  csv += '# 使用できるカテゴリ記号一覧\n';
+  cats.forEach(cat => {
+    const c = getCatConf(cat);
+    csv += `# ${cat} = ${c.label}\n`;
+  });
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = '購入先マスタ_テンプレート.csv'; a.click();
+  URL.revokeObjectURL(url);
+  showToast('📄 テンプレートをダウンロードしました');
+}
+
+// ===== CSV IMPORT =====
+function handleCsvDrop(event) {
+  event.preventDefault();
+  document.getElementById('csvDropZone').classList.remove('dragover');
+  const file = event.dataTransfer.files[0];
+  if (file && file.name.endsWith('.csv')) processCsvFile(file);
+  else showToast('⚠️ CSVファイルを選択してください');
+}
+
+function handleCsvFile(input) {
+  const file = input.files[0];
+  if (file) processCsvFile(file);
+}
+
+function processCsvFile(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    const text = e.target.result;
+    const rows = text.split('\n').map(r => r.split(',').map(c => c.trim().replace(/^"|"$/g, '')));
+    if (rows.length < 2) { showToast('⚠️ データが空です'); return; }
+
+    // Show preview
+    const headers = rows[0];
+    const previewRows = rows.slice(1, 6).filter(r => r.some(c => c));
+    let preview = `<div style="font-size:0.8rem;font-weight:700;margin-bottom:6px">📋 プレビュー（先頭5件）</div>`;
+    preview += `<div style="overflow-x:auto"><table class="csv-preview-table"><thead><tr>`;
+    preview += headers.map(h => `<th>${h}</th>`).join('');
+    preview += `</tr></thead><tbody>`;
+    previewRows.forEach(r => {
+      preview += `<tr>${r.map(c => `<td>${c}</td>`).join('')}</tr>`;
+    });
+    preview += `</tbody></table></div>`;
+
+    const validRows = rows.slice(1).filter(r => r[0] && r[5]);
+    preview += `<div style="margin-top:10px;font-size:0.82rem;color:var(--muted)">${validRows.length}件のデータが検出されました</div>`;
+    preview += `<button class="btn-primary" style="margin-top:10px" onclick="importCsvData(${JSON.stringify(validRows).replace(/</g,'&lt;')})">📥 ${validRows.length}件をインポートする</button>`;
+    document.getElementById('csvPreview').innerHTML = preview;
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+function importCsvData(rows) {
+  // Parse rows: date, weekday, category, shop, purpose, amount, payment, card, paydate, confirm, buyer, memo
+  let imported = 0, skipped = 0;
+  rows.forEach(r => {
+    const dateStr = r[0];
+    const amount = parseInt(r[5]);
+    if (!dateStr || isNaN(amount) || amount <= 0) { skipped++; return; }
+
+    // Normalize date (handles Excel serial numbers and date strings)
+    let date = '';
+    if (/^\d{4}[-\/]\d{1,2}[-\/]\d{1,2}/.test(dateStr)) {
+      date = dateStr.slice(0, 10).replace(/\//g, '-');
+    } else if (/^\d{5}$/.test(dateStr)) {
+      // Excel serial date
+      const d = new Date((parseInt(dateStr) - 25569) * 86400 * 1000);
+      date = d.toISOString().slice(0, 10);
+    } else { skipped++; return; }
+
+    const cat = r[2] || '';
+    const purpose = r[4] || '';
+    const tx = {
+      id: genId(),
+      date, category: cat, shop: r[3] || '', purpose,
+      amount, payment: r[6] || '現金',
+      confirm: r[9] || '保留', buyer: r[10] || '', memo: r[11] || ''
+    };
+    // Skip if exact duplicate
+    const isDupe = transactions.some(t => t.date === date && t.amount === amount && t.shop === tx.shop && t.category === tx.category);
+    if (!isDupe) {
+      transactions.push(tx);
+      learnPurpose(cat, purpose);
+      imported++;
+    } else skipped++;
+  });
+
+  saveData();
+  document.getElementById('csvPreview').innerHTML =
+    `<div style="background:#E8F5E9;border-radius:10px;padding:12px;text-align:center">
+      <div style="font-size:1.2rem">✅</div>
+      <div style="font-weight:700;margin:4px 0">${imported}件をインポートしました</div>
+      <div style="font-size:0.78rem;color:var(--muted)">${skipped}件はスキップ（重複または不正データ）</div>
+    </div>`;
+  showToast(`✅ ${imported}件インポート完了`);
+}
+
+// ===== CSV EXPORT =====
+function exportCSV(type) {
+  let csv = '', filename = '';
+  if (type === 'transactions') {
+    csv = '日付,カテゴリ,購入先,用途,金額,支払方法,照合,購入者,メモ\n';
+    csv += transactions.map(t =>
+      [t.date, t.category, t.shop, t.purpose, t.amount, t.payment, t.confirm, t.buyer, t.memo]
+      .map(v => `"${(v||'').toString().replace(/"/g,'""')}"`)
+      .join(',')
+    ).join('\n');
+    filename = `支出明細_${currentYear}年.csv`;
+  } else if (type === 'cards') {
+    csv = '年月,セゾンカード,三井住友カード,楽天カード,ENEOSカード,イオンカード,Amazonカード,合計\n';
+    const keys = Object.keys(cardData).sort();
+    csv += keys.map(k => {
+      const d = cardData[k];
+      const total = ALL_CARDS.reduce((s, c) => s + (d[c] || 0), 0);
+      return [k, ...ALL_CARDS.map(c => d[c] || 0), total].join(',');
+    }).join('\n');
+    filename = `カード引落し.csv`;
+  }
+
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+  showToast('📤 ' + filename + ' をダウンロードしました');
+}
+
+// ===== DATA RESET =====
+// ===== PASSWORD-PROTECTED RESET =====
+const RESET_PASSWORD = 'nakatou2024';   // ← パスワードはここで変更できます
+let pendingResetType = null;
+
+function openResetModal(type) {
+  pendingResetType = type;
+  const isAll = type === 'all';
+  document.getElementById('resetModalTitle').textContent = isAll ? '⚠️ 全データリセット' : '🗑️ 支出明細リセット';
+  document.getElementById('resetModalDesc').textContent = isAll
+    ? '全データ（支出明細・カード・銀行口座・マスタ設定）を完全に削除します。この操作は取り消せません。パスワードを入力して実行してください。'
+    : '支出明細データをすべて削除します。この操作は取り消せません。パスワードを入力して実行してください。';
+  document.getElementById('resetPasswordInput').value = '';
+  document.getElementById('resetPwError').style.display = 'none';
+  document.getElementById('resetModalOverlay').classList.add('open');
+  setTimeout(() => document.getElementById('resetPasswordInput').focus(), 300);
+}
+
+function closeResetModal() {
+  document.getElementById('resetModalOverlay').classList.remove('open');
+  pendingResetType = null;
+}
+
+function handleResetModalClick(e) {
+  if (e.target === document.getElementById('resetModalOverlay')) closeResetModal();
+}
+
+function toggleResetPw() {
+  const inp = document.getElementById('resetPasswordInput');
+  const btn = document.getElementById('resetPwToggle');
+  if (inp.type === 'password') { inp.type = 'text'; btn.textContent = '🙈'; }
+  else { inp.type = 'password'; btn.textContent = '👁️'; }
+}
+
+function confirmReset() {
+  const entered = document.getElementById('resetPasswordInput').value;
+  const errEl = document.getElementById('resetPwError');
+  if (entered !== RESET_PASSWORD) {
+    errEl.style.display = 'block';
+    const inp = document.getElementById('resetPasswordInput');
+    inp.classList.add('shake');
+    inp.style.borderColor = '#E53935';
+    setTimeout(() => inp.classList.remove('shake'), 400);
+    inp.select();
+    return;
+  }
+  errEl.style.display = 'none';
+  closeResetModal();
+  resetData(pendingResetType);
+}
+
+function resetData(type) {
+  if (type === 'transactions' || type === 'all') {
+    transactions = [];
+    saveData();
+  }
+  if (type === 'all') {
+    cardData = {};
+    bankData = {};
+    purposeMaster = JSON.parse(JSON.stringify(DEFAULT_PURPOSES));
+    shopMaster = [];
+    localStorage.removeItem(CARD_STORAGE_KEY);
+    localStorage.removeItem(BANK_STORAGE_KEY);
+    localStorage.removeItem(PURPOSE_MASTER_KEY);
+    localStorage.removeItem(SHOP_MASTER_KEY);
+  }
+  showToast('🗑️ リセット完了');
+  renderPage(document.querySelector('.page.active').id.replace('page-', ''));
+}
+
+function saveTransaction() {
+  const date     = document.getElementById('fDate').value;
+  const category = document.getElementById('fCategory').value;
+  const shop     = document.getElementById('fShop').value;
+  const purpose  = document.getElementById('fPurpose').value;
+  const amount   = parseInt(document.getElementById('fAmount').value);
+  const payment  = document.getElementById('fPayment').value;
+  const buyer    = document.getElementById('fBuyer').value;
+  const confirm  = document.getElementById('fConfirm').value;
+  const memo     = document.getElementById('fMemo').value;
+  const txType   = document.getElementById('fTxType').value || 'normal';
+
+  if (!date || !amount || isNaN(amount)) {
+    showToast('⚠️ 日付と金額は必須です');
+    return;
+  }
+
+  const id = editingId || genId();
+  const tx = { id, date, category, shop, purpose, amount, payment, confirm, buyer, memo, txType };
+
+  if (editingId) {
+    const idx = transactions.findIndex(t => t.id === editingId);
+    if (idx !== -1) transactions[idx] = tx;
+  } else {
+    transactions.push(tx);
+  }
+
+  // Auto-learn shop master
+  if (category && shop) {
+    if (!shopMaster[category]) shopMaster[category] = [];
+    if (!shopMaster[category].includes(shop)) { shopMaster[category].push(shop); shopMaster[category].sort(); saveShopMaster(); }
+  }
+
+  saveData();
+  closeModal();
+  showToast(editingId ? '✅ 更新しました' : '✅ 追加しました');
+
+  const activePage = document.querySelector('.page.active').id.replace('page-', '');
+  renderPage(activePage);
+}
+
+function deleteTransaction() {
+  if (!editingId) return;
+  if (!confirm('この支出を削除しますか？')) return;
+  transactions = transactions.filter(t => t.id !== editingId);
+  saveData();
+  closeModal();
+  showToast('🗑️ 削除しました');
+  const activePage = document.querySelector('.page.active').id.replace('page-', '');
+  renderPage(activePage);
+}
+
+function destroyChart(id) {
+  if (charts[id]) { charts[id].destroy(); delete charts[id]; }
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ===== CREDIT PAGE =====
+// ===== CARD =====
+function renderCard() {
+  const key = getCardKey(currentYear, currentMonth);
+  const monthCards = getMonthCardData(currentYear, currentMonth);
+  const total = Object.values(monthCards).reduce((s, v) => s + v, 0);
+
+  // Header
+  document.getElementById('card-month-label').textContent = `${currentYear}年${currentMonth}月 引落し`;
+  document.getElementById('card-month-total').textContent = fmt(total);
+
+  // Compare with last month
+  let prevY = currentYear, prevM = currentMonth - 1;
+  if (prevM < 1) { prevM = 12; prevY--; }
+  const prevTotal = Object.values(getMonthCardData(prevY, prevM)).reduce((s, v) => s + v, 0);
+  if (prevTotal > 0) {
+    const diff = total - prevTotal;
+    const sign = diff >= 0 ? '▲' : '▼';
+    const col = diff >= 0 ? '#FFCDD2' : '#C8E6C9';
+    document.getElementById('card-month-note').innerHTML =
+      `<span style="background:${col};padding:2px 8px;border-radius:10px;color:#333">前月比 ${sign} ${fmt(Math.abs(diff))}</span>`;
+  } else {
+    document.getElementById('card-month-note').textContent = '';
+  }
+
+  // Card bars
+  const maxAmt = Math.max(...ALL_CARDS.map(c => monthCards[c] || 0), 1);
+  document.getElementById('card-bars').innerHTML = ALL_CARDS.map(card => {
+    const amt = monthCards[card] || 0;
+    if (amt === 0 && !['セゾンカード','楽天カード','イオンカード'].includes(card)) return '';
+    const pct = Math.round(amt / maxAmt * 100);
+    const color = CARD_COLORS[card] || '#9E9E9E';
+    const emoji = CARD_EMOJIS[card] || '💳';
+    return `<div class="card-bar-row">
+      <div class="card-name" style="color:${color}">${emoji} ${card}</div>
+      <div class="card-bar-wrap"><div class="card-bar-fill" style="width:${pct}%;background:${color}"></div></div>
+      <div class="card-amount" style="color:${amt>0?color:'#BDBDBD'}">${amt > 0 ? fmt(amt) : '—'}</div>
+    </div>`;
+  }).join('');
+
+  // Trend chart — last 6 months
+  const trendKeys = [];
+  for (let i = 5; i >= 0; i--) {
+    let y = currentYear, m = currentMonth - i;
+    while (m < 1) { m += 12; y--; }
+    trendKeys.push({ label: `${y !== currentYear ? (y-2000)+'/' : ''}${m}月`, y, m });
+  }
+
+  destroyChart('cardTrendChart');
+  const ctx = document.getElementById('cardTrendChart').getContext('2d');
+  charts['cardTrendChart'] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: trendKeys.map(k => k.label),
+      datasets: ALL_CARDS.map(card => ({
+        label: card,
+        data: trendKeys.map(k => getMonthCardData(k.y, k.m)[card] || 0),
+        backgroundColor: CARD_COLORS[card] || '#9E9E9E',
+        borderRadius: 4,
+      }))
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { labels: { font: { size: 10, family: "'Zen Maru Gothic'" }, boxWidth: 10, padding: 8 } },
+        tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + fmt(ctx.raw) } }
+      },
+      scales: {
+        x: { stacked: true, grid: { display: false } },
+        y: { stacked: true, ticks: { callback: v => '¥' + Math.round(v/1000) + 'k' }, grid: { color: '#F0F0F0' } }
+      }
+    }
+  });
+
+  // Input fields for current month
+  document.getElementById('cardInputFields').innerHTML = ALL_CARDS.map(card => {
+    const val = monthCards[card] || '';
+    const color = CARD_COLORS[card] || '#9E9E9E';
+    const emoji = CARD_EMOJIS[card] || '💳';
+    return `<div class="card-input-row">
+      <div class="card-input-label" style="color:${color}">${emoji} ${card}</div>
+      <input type="number" class="card-input-field" id="cinput_${card.replace(/[^\w]/g,'_')}"
+        value="${val}" placeholder="0" min="0"
+        style="border-color:${val ? color : '#E8E8E8'}">
+    </div>`;
+  }).join('');
+
+  // Annual table
+  const yearTotals = {};
+  ALL_CARDS.forEach(c => { yearTotals[c] = 0; });
+  let grandTotal = 0;
+  for (let m = 1; m <= 12; m++) {
+    const d = getMonthCardData(currentYear, m);
+    ALL_CARDS.forEach(c => { yearTotals[c] += d[c] || 0; });
+    grandTotal += Object.values(d).reduce((s, v) => s + v, 0);
+  }
+  const maxYearly = Math.max(...Object.values(yearTotals), 1);
+  document.getElementById('cardAnnualTable').innerHTML =
+    ALL_CARDS.map(card => {
+      const amt = yearTotals[card];
+      if (amt === 0) return '';
+      const color = CARD_COLORS[card] || '#9E9E9E';
+      const emoji = CARD_EMOJIS[card] || '💳';
+      const pct = Math.round(amt / grandTotal * 100);
+      return `<div class="card-annual-row">
+        <div class="card-annual-label" style="color:${color}">${emoji} ${card}</div>
+        <div style="flex:1;margin:0 12px">
+          <div class="card-bar-wrap" style="height:8px">
+            <div class="card-bar-fill" style="width:${Math.round(amt/maxYearly*100)}%;background:${color}"></div>
+          </div>
+        </div>
+        <div class="card-annual-amount" style="color:${color}">${fmt(amt)} <span style="font-size:0.72rem;color:var(--muted)">${pct}%</span></div>
+      </div>`;
+    }).join('') +
+    `<div class="card-annual-row" style="margin-top:8px;padding-top:12px;border-top:2px solid #E0E0E0;border-bottom:none">
+      <div class="card-annual-label" style="font-size:0.95rem">💳 年間合計</div>
+      <div></div>
+      <div class="card-annual-amount" style="font-size:1.05rem;color:var(--ink)">${fmt(grandTotal)}</div>
+    </div>`;
+
+  // Bank account section
+  const cardTotal = Object.values(monthCards).reduce((s, v) => s + v, 0);
+  const monthBanks = getMonthBankData(currentYear, currentMonth);
+
+  document.getElementById('bankAccountSection').innerHTML = BANK_ACCOUNTS.map(acct => {
+    const balance = monthBanks[acct.id] || 0;
+    const afterCard = acct.id === 'yucho' ? balance - cardTotal : balance;
+    const isWarning = afterCard < 0;
+    const balStr = balance ? balance.toLocaleString('ja-JP') : '';
+    return `<div class="bank-account-card">
+      <div class="bank-account-header">
+        <span style="font-size:1.4rem">${acct.emoji}</span>
+        <span class="bank-account-name" style="color:${acct.color}">${acct.name}</span>
+      </div>
+      <div class="bank-balance-row">
+        <div class="bank-balance-label">💰 現在の残高</div>
+        <input type="number" class="bank-balance-input" id="bank_${acct.id}"
+          value="${balance || ''}" placeholder="残高を入力（円）" min="0"
+          style="border-color:${balance ? acct.color : '#E8E8E8'}">
+      </div>
+      ${acct.id === 'yucho' && balance ? `
+      <div class="bank-balance-calc ${isWarning ? 'warning' : ''}">
+        <span class="bank-calc-label">${isWarning ? '⚠️' : '✅'} カード引落し後の予測残高</span>
+        <span class="bank-calc-value">${fmt(afterCard)}</span>
+      </div>
+      <div style="font-size:0.72rem;color:var(--muted);margin-top:4px;padding:0 2px">
+        現在残高 ${fmt(balance)} ー 今月カード引落し ${fmt(cardTotal)} = ${fmt(afterCard)}
+      </div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function saveCardData() {
+  const key = getCardKey(currentYear, currentMonth);
+  if (!cardData[key]) cardData[key] = {};
+  ALL_CARDS.forEach(card => {
+    const inputId = 'cinput_' + card.replace(/[^\w]/g, '_');
+    const el = document.getElementById(inputId);
+    if (el) cardData[key][card] = parseInt(el.value) || 0;
+  });
+  saveCardDataToStorage();
+  showToast('💳 カードデータを保存しました');
+  renderCard();
+}
+
+function saveBankData() {
+  const key = getBankKey(currentYear, currentMonth);
+  if (!bankData[key]) bankData[key] = {};
+  BANK_ACCOUNTS.forEach(acct => {
+    const el = document.getElementById('bank_' + acct.id);
+    if (el) bankData[key][acct.id] = parseInt(el.value.replace(/,/g, '')) || 0;
+  });
+  saveBankDataToStorage();
+  showToast('🏦 口座残高を保存しました');
+  renderCard();
+}
+
+// ===== ADD MENU & INCOME MODAL =====
+function toggleAddMenu() {
+  document.getElementById('addMenuDropdown').classList.toggle('open');
+}
+function closeAddMenu() {
+  document.getElementById('addMenuDropdown').classList.remove('open');
+}
+
+function openIncomeModal() {
+  const key = getIncomeKey(currentYear, currentMonth);
+  const existing = incomeUserData[key] || INCOME_DATA[key] || {};
+  const isExcel = !incomeUserData[key] && !!INCOME_DATA[key];
+  document.getElementById('incomeModalMonthLabel').textContent = `${currentYear}年${currentMonth}月の収入`;
+  document.getElementById('incToruRef').textContent   = isExcel ? '📊 Excel取込データ' : (incomeUserData[key] ? '✏️ 入力済み' : '');
+  document.getElementById('incHitomiRef').textContent = isExcel ? '📊 Excel取込データ' : (incomeUserData[key] ? '✏️ 入力済み' : '');
+  const td = existing.toru_detail   || {};
+  const hd = existing.hitomi_detail || {};
+  const ed = existing.extra_detail  || {};
+  document.getElementById('inc_toru_base').value        = td.base       !== undefined ? td.base       : (isExcel ? existing.toru || '' : '');
+  document.getElementById('inc_toru_overtime').value    = td.overtime   !== undefined ? td.overtime   : '';
+  document.getElementById('inc_toru_holiday').value     = td.holiday    !== undefined ? td.holiday    : '';
+  document.getElementById('inc_toru_bonus').value       = td.bonus      !== undefined ? td.bonus      : '';
+  document.getElementById('inc_toru_other').value       = td.other      !== undefined ? td.other      : '';
+  document.getElementById('inc_toru_deduction').value   = td.deduction  !== undefined ? td.deduction  : '';
+  document.getElementById('inc_hitomi_base').value      = hd.base       !== undefined ? hd.base       : (isExcel ? existing.hitomi || '' : '');
+  document.getElementById('inc_hitomi_overtime').value  = hd.overtime   !== undefined ? hd.overtime   : '';
+  document.getElementById('inc_hitomi_holiday').value   = hd.holiday    !== undefined ? hd.holiday    : '';
+  document.getElementById('inc_hitomi_bonus').value     = hd.bonus      !== undefined ? hd.bonus      : '';
+  document.getElementById('inc_hitomi_other').value     = hd.other      !== undefined ? hd.other      : '';
+  document.getElementById('inc_hitomi_deduction').value = hd.deduction  !== undefined ? hd.deduction  : '';
+  // Extra income fields
+  document.getElementById('inc_extra_grant').value     = ed.grant     || '';
+  document.getElementById('inc_extra_insurance').value = ed.insurance || '';
+  document.getElementById('inc_extra_dividend').value  = ed.dividend  || '';
+  document.getElementById('inc_extra_lottery').value   = ed.lottery   || '';
+  document.getElementById('inc_extra_other').value     = ed.other     || '';
+  document.getElementById('inc_extra_memo').value      = ed.memo      || '';
+  // Reset extra panel state
+  document.getElementById('extraIncomeFields').style.display = 'none';
+  document.getElementById('extraIncomeToggle').textContent = '▼ 展開';
+  updateIncomeTotals();
+  document.getElementById('incomeModalOverlay').classList.add('open');
+}
+
+function closeIncomeModal() {
+  document.getElementById('incomeModalOverlay').classList.remove('open');
+}
+function handleIncomeModalClick(e) {
+  if (e.target === document.getElementById('incomeModalOverlay')) closeIncomeModal();
+}
+function getIncomeFieldVal(id) { return parseInt(document.getElementById(id).value) || 0; }
+
+function updateIncomeTotals() {
+  const toruGross   = getIncomeFieldVal('inc_toru_base')   + getIncomeFieldVal('inc_toru_overtime')
+                    + getIncomeFieldVal('inc_toru_holiday') + getIncomeFieldVal('inc_toru_bonus')
+                    + getIncomeFieldVal('inc_toru_other');
+  const toruNet     = toruGross - getIncomeFieldVal('inc_toru_deduction');
+  const hitomiGross = getIncomeFieldVal('inc_hitomi_base')   + getIncomeFieldVal('inc_hitomi_overtime')
+                    + getIncomeFieldVal('inc_hitomi_holiday') + getIncomeFieldVal('inc_hitomi_bonus')
+                    + getIncomeFieldVal('inc_hitomi_other');
+  const hitomiNet   = hitomiGross - getIncomeFieldVal('inc_hitomi_deduction');
+  const salaryNet   = Math.max(0, toruNet) + Math.max(0, hitomiNet);
+
+  const extraTotal  = getIncomeFieldVal('inc_extra_grant') + getIncomeFieldVal('inc_extra_insurance')
+                    + getIncomeFieldVal('inc_extra_dividend') + getIncomeFieldVal('inc_extra_lottery')
+                    + getIncomeFieldVal('inc_extra_other');
+
+  document.getElementById('inc_toru_total_val').textContent   = fmt(Math.max(0, toruNet));
+  document.getElementById('inc_hitomi_total_val').textContent = fmt(Math.max(0, hitomiNet));
+  document.getElementById('inc_family_total_val').textContent = fmt(salaryNet);
+  const extraEl = document.getElementById('inc_extra_total_val');
+  if (extraEl) extraEl.textContent = fmt(extraTotal);
+  const grandEl = document.getElementById('inc_grand_total_val');
+  if (grandEl) grandEl.textContent = fmt(salaryNet + extraTotal);
+}
+
+function saveIncomeData() {
+  const key = getIncomeKey(currentYear, currentMonth);
+  const toruDetail   = { base: getIncomeFieldVal('inc_toru_base'),   overtime: getIncomeFieldVal('inc_toru_overtime'),
+                         holiday: getIncomeFieldVal('inc_toru_holiday'), bonus: getIncomeFieldVal('inc_toru_bonus'),
+                         other: getIncomeFieldVal('inc_toru_other'),  deduction: getIncomeFieldVal('inc_toru_deduction') };
+  const hitomiDetail = { base: getIncomeFieldVal('inc_hitomi_base'), overtime: getIncomeFieldVal('inc_hitomi_overtime'),
+                         holiday: getIncomeFieldVal('inc_hitomi_holiday'), bonus: getIncomeFieldVal('inc_hitomi_bonus'),
+                         other: getIncomeFieldVal('inc_hitomi_other'), deduction: getIncomeFieldVal('inc_hitomi_deduction') };
+  const extraDetail  = {
+    grant: getIncomeFieldVal('inc_extra_grant'), insurance: getIncomeFieldVal('inc_extra_insurance'),
+    dividend: getIncomeFieldVal('inc_extra_dividend'), lottery: getIncomeFieldVal('inc_extra_lottery'),
+    other: getIncomeFieldVal('inc_extra_other'),
+    memo: document.getElementById('inc_extra_memo')?.value || '',
+  };
+  const toruNet   = (toruDetail.base + toruDetail.overtime + toruDetail.holiday + toruDetail.bonus + toruDetail.other) - toruDetail.deduction;
+  const hitomiNet = (hitomiDetail.base + hitomiDetail.overtime + hitomiDetail.holiday + hitomiDetail.bonus + hitomiDetail.other) - hitomiDetail.deduction;
+  const extraSum  = extraDetail.grant + extraDetail.insurance + extraDetail.dividend + extraDetail.lottery + extraDetail.other;
+  const salaryNet = Math.max(0, toruNet) + Math.max(0, hitomiNet);
+  incomeUserData[key] = {
+    toru: Math.max(0, toruNet), hitomi: Math.max(0, hitomiNet),
+    total: salaryNet + extraSum,           // grand total inc extra
+    salary_total: salaryNet,               // salary only
+    extra: extraSum,
+    toru_detail: toruDetail, hitomi_detail: hitomiDetail, extra_detail: extraDetail,
+  };
+  saveIncomeToStorage();
+  closeIncomeModal();
+  showToast('💰 収入を保存しました');
+  renderPage(document.querySelector('.page.active').id.replace('page-', ''));
+}
+
+// ===== FIREBASE SYNC =====
+const FB_URL = 'https://kakeibo-e3926-default-rtdb.asia-southeast1.firebasedatabase.app/kakeibo.json';
+let syncStatus = 'idle';
+let saveTimer = null;
+
+function setSyncStatus(status, msg) {
+  syncStatus = status;
+  const el = document.getElementById('syncStatusBar');
+  if (!el) return;
+  const icons  = { idle:'☁️', loading:'⏳', saving:'💾', error:'⚠️', ok:'✅' };
+  const colors = { idle:'#607D8B', loading:'#1565C0', saving:'#2E7D32', error:'#C62828', ok:'#2E7D32' };
+  el.textContent = (icons[status]||'☁️') + ' ' + msg;
+  el.style.color = colors[status] || '#607D8B';
+}
+
+async function loadFromSheets() {
+  setSyncStatus('loading', 'クラウドから読み込み中…');
+  try {
+    const res  = await fetch(FB_URL, { cache: 'no-store' });
+    const data = await res.json();
+    if (!data) {
+      setSyncStatus('idle', 'クラウドにデータなし（初回）');
+      return false;
+    }
+    if (data.transactions)   { transactions   = data.transactions;   saveLocalCache('kakeibo_v1', transactions); }
+    if (data.cardData)       { cardData        = data.cardData;       saveLocalCache('kakeibo_cards_v1', cardData); }
+    if (data.bankData)       { bankData        = data.bankData;       saveLocalCache('kakeibo_bank_v1', bankData); }
+    if (data.incomeUserData) { incomeUserData  = data.incomeUserData; saveLocalCache('kakeibo_income_v1', incomeUserData); }
+    if (data.purposeMaster)  { purposeMaster   = data.purposeMaster;  saveLocalCache('kakeibo_purpose_master_v1', purposeMaster); }
+    if (data.shopMaster)     { shopMaster      = data.shopMaster;     saveLocalCache('kakeibo_shop_master_v1', shopMaster); }
+    const t = new Date().toLocaleTimeString('ja-JP', {hour:'2-digit', minute:'2-digit'});
+    setSyncStatus('ok', '同期済み ' + t);
+    return true;
+  } catch(e) {
+    console.warn('Firebase load failed:', e);
+    setSyncStatus('error', 'オフライン中（ローカルデータを使用）');
+    return false;
+  }
+}
+
+async function saveToSheets() {
+  setSyncStatus('saving', 'クラウドに保存中…');
+  const data = { transactions, cardData, bankData, incomeUserData, purposeMaster, shopMaster };
+  try {
+    const res = await fetch(FB_URL, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const t = new Date().toLocaleTimeString('ja-JP', {hour:'2-digit', minute:'2-digit'});
+    setSyncStatus('ok', '保存完了 ' + t);
+  } catch(e) {
+    console.warn('Firebase save failed:', e);
+    setSyncStatus('error', '保存失敗（ローカルのみ保存済み）');
+  }
+}
+
+function debouncedSave() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveToSheets, 1500);
+}
+
+function saveLocalCache(key, val) {
+  try { localStorage.setItem(key, JSON.stringify(val)); } catch(e) {}
+}
+
+function saveData()              { _localSaveData();  saveLocalCache('kakeibo_v1', transactions);              debouncedSave(); }
+function saveCardDataToStorage() { saveLocalCache('kakeibo_cards_v1', cardData);                               debouncedSave(); }
+function saveBankDataToStorage() { saveLocalCache('kakeibo_bank_v1', bankData);                                debouncedSave(); }
+function saveIncomeToStorage()   { saveLocalCache('kakeibo_income_v1', incomeUserData);                        debouncedSave(); }
+function savePurposeMaster()     { saveLocalCache('kakeibo_purpose_master_v1', purposeMaster);                 debouncedSave(); }
+function saveShopMaster()        { saveLocalCache('kakeibo_shop_master_v1', shopMaster);                       debouncedSave(); }
+// ===== INIT =====
+// Load from local cache first (instant display), then sync from cloud
+loadData();
+loadCardData();
+loadBankData();
+loadIncomeUserData();
+
+// Wire income input live totals
+document.querySelectorAll('.income-input').forEach(el => el.addEventListener('input', updateIncomeTotals));
+// Close add-menu on outside click
+document.addEventListener('click', e => { if (!e.target.closest('.header-add-menu')) closeAddMenu(); });
+updateMonthLabel();
+renderHome();
+
+// Then load from Sheets and refresh if data changed
+loadFromSheets().then(loaded => { if (loaded) renderPage(document.querySelector('.page.active')?.id.replace('page-','') || 'home'); });
+</script>
+</body>
+</html>
