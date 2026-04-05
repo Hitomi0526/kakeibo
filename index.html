@@ -6,6 +6,7 @@
 <title>🏕️ トオル＆ひとみ 家計簿</title>
 <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700;900&family=M+PLUS+Rounded+1c:wght@400;700;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   :root {
     --sun: #FFB800;
@@ -738,6 +739,9 @@
   <button class="nav-tab" onclick="showPage('admin')" id="tab-admin">
     <span class="tab-icon">⚙️</span>管理
   </button>
+  <button class="nav-tab" onclick="showPage('kakeibo')" id="tab-kakeibo">
+    <span class="tab-icon">📋</span>家計管理
+  </button>
 </div>
 
 <!-- Home Page -->
@@ -1035,11 +1039,19 @@
 
   <!-- データエクスポート -->
   <div class="card" style="padding:16px 20px">
-    <div class="card-title">📤 データエクスポート</div>
-    <div class="admin-note">現在のデータをCSV形式でダウンロードし、Excelやスプレッドシートで確認・バックアップできます。</div>
+    <div class="card-title">📊 Excelダウンロード</div>
+    <div class="admin-note">各データをExcel形式（.xlsx）でダウンロードできます。編集後にCSVで保存してインポートすることもできます。</div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px">
-      <button class="btn-admin" onclick="exportCSV('transactions')">💾 支出明細をCSV出力</button>
-      <button class="btn-admin" onclick="exportCSV('cards')">💳 カードデータをCSV出力</button>
+      <button class="btn-admin" onclick="exportExcel('all')" style="border-color:#2E7D32;color:#2E7D32">
+        📊 全データをExcel出力（全シート）
+      </button>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
+      <button class="btn-admin" onclick="exportExcel('transactions')">🛒 支出明細</button>
+      <button class="btn-admin" onclick="exportExcel('income')">💰 給料・収入</button>
+      <button class="btn-admin" onclick="exportExcel('utility')">💡 公共料金</button>
+      <button class="btn-admin" onclick="exportExcel('cards')">💳 カードデータ</button>
+      <button class="btn-admin" onclick="exportExcel('bank')">🏦 銀行口座</button>
     </div>
   </div>
 
@@ -1098,7 +1110,166 @@
 
 </div>
 
-<!-- Income Input Modal -->
+<!-- 家計管理 Page -->
+<div class="page" id="page-kakeibo">
+
+  <!-- ヘッダー -->
+  <div class="admin-hero" style="background:linear-gradient(135deg,#1A237E,#283593)">
+    <div style="font-size:2rem">📋</div>
+    <div class="admin-hero-title">家計管理</div>
+    <div class="admin-hero-sub">給料明細・公共料金の入力と履歴管理</div>
+  </div>
+
+  <!-- 月ナビ -->
+  <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:16px">
+    <button class="month-btn" style="background:#283593;color:white" onclick="changeKakeiboMonth(-1)">◀</button>
+    <span id="kakeiboMonthLabel" style="font-weight:900;font-size:1.1rem;color:#1A237E"></span>
+    <button class="month-btn" style="background:#283593;color:white" onclick="changeKakeiboMonth(1)">▶</button>
+  </div>
+
+  <!-- 給料明細入力 -->
+  <div class="card" style="padding:16px 20px">
+    <div class="card-title">💰 給料明細入力</div>
+    <div class="admin-note">毎月の給料明細を入力します。手取り額が自動計算されます。</div>
+
+    <!-- トオル -->
+    <div style="border:2px solid #E3F2FD;border-radius:14px;padding:14px;margin-bottom:12px">
+      <div style="font-weight:900;font-size:0.95rem;color:#1565C0;margin-bottom:12px">🧑 トオル</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">基本給</label>
+          <input type="number" class="form-input" id="kk_toru_base" placeholder="0" oninput="updateKakeiboTotals()">
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">残業代</label>
+          <input type="number" class="form-input" id="kk_toru_overtime" placeholder="0" oninput="updateKakeiboTotals()">
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">休日出勤</label>
+          <input type="number" class="form-input" id="kk_toru_holiday" placeholder="0" oninput="updateKakeiboTotals()">
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">賞与</label>
+          <input type="number" class="form-input" id="kk_toru_bonus" placeholder="0" oninput="updateKakeiboTotals()">
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">その他手当</label>
+          <input type="number" class="form-input" id="kk_toru_other" placeholder="0" oninput="updateKakeiboTotals()">
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label" style="color:#E53935">控除合計</label>
+          <input type="number" class="form-input" id="kk_toru_deduction" placeholder="0" style="border-color:#FFCDD2" oninput="updateKakeiboTotals()">
+        </div>
+      </div>
+      <div style="background:#E3F2FD;border-radius:10px;padding:10px 14px;margin-top:12px;display:flex;justify-content:space-between;font-weight:700;color:#1565C0">
+        <span>🧑 トオル 手取り</span><span id="kk_toru_net">¥0</span>
+      </div>
+    </div>
+
+    <!-- ひとみ -->
+    <div style="border:2px solid #FCE4EC;border-radius:14px;padding:14px;margin-bottom:12px">
+      <div style="font-weight:900;font-size:0.95rem;color:#C2185B;margin-bottom:12px">👩 ひとみ</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">基本給</label>
+          <input type="number" class="form-input" id="kk_hitomi_base" placeholder="0" oninput="updateKakeiboTotals()">
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">残業代</label>
+          <input type="number" class="form-input" id="kk_hitomi_overtime" placeholder="0" oninput="updateKakeiboTotals()">
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">休日出勤</label>
+          <input type="number" class="form-input" id="kk_hitomi_holiday" placeholder="0" oninput="updateKakeiboTotals()">
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">賞与</label>
+          <input type="number" class="form-input" id="kk_hitomi_bonus" placeholder="0" oninput="updateKakeiboTotals()">
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">その他手当</label>
+          <input type="number" class="form-input" id="kk_hitomi_other" placeholder="0" oninput="updateKakeiboTotals()">
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label" style="color:#E53935">控除合計</label>
+          <input type="number" class="form-input" id="kk_hitomi_deduction" placeholder="0" style="border-color:#FFCDD2" oninput="updateKakeiboTotals()">
+        </div>
+      </div>
+      <div style="background:#FCE4EC;border-radius:10px;padding:10px 14px;margin-top:12px;display:flex;justify-content:space-between;font-weight:700;color:#C2185B">
+        <span>👩 ひとみ 手取り</span><span id="kk_hitomi_net">¥0</span>
+      </div>
+    </div>
+
+    <!-- 世帯合計 -->
+    <div style="background:linear-gradient(135deg,#43A047,#66BB6A);border-radius:14px;padding:14px 16px;display:flex;justify-content:space-between;font-weight:900;font-size:1.05rem;color:white;margin-bottom:12px">
+      <span>🏠 世帯合計 手取り</span><span id="kk_family_net">¥0</span>
+    </div>
+
+    <button class="btn-primary" onclick="saveKakeiboIncome()">💾 給料明細を保存する</button>
+  </div>
+
+  <!-- 公共料金入力 -->
+  <div class="card" style="padding:16px 20px">
+    <div class="card-title">💡 公共料金・固定費入力</div>
+    <div class="admin-note">毎月の公共料金と固定費を入力します。年間タブのグラフにも反映されます。</div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">🏠 住居費（ローン）</label>
+        <input type="number" class="form-input" id="kk_housing" placeholder="0" oninput="updateKakeiboUtilityTotal()">
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">💡 電気代</label>
+        <input type="number" class="form-input" id="kk_elec" placeholder="0" oninput="updateKakeiboUtilityTotal()">
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">🔥 ガス代</label>
+        <input type="number" class="form-input" id="kk_gas" placeholder="0" oninput="updateKakeiboUtilityTotal()">
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">💧 水道代</label>
+        <input type="number" class="form-input" id="kk_water" placeholder="0" oninput="updateKakeiboUtilityTotal()">
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">📺 玉島テレビ</label>
+        <input type="number" class="form-input" id="kk_tv" placeholder="0" oninput="updateKakeiboUtilityTotal()">
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">📱 携帯（トオル）</label>
+        <input type="number" class="form-input" id="kk_mobile_toru" placeholder="0" oninput="updateKakeiboUtilityTotal()">
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">📱 携帯（ひとみ）</label>
+        <input type="number" class="form-input" id="kk_mobile_hitomi" placeholder="0" oninput="updateKakeiboUtilityTotal()">
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">⛽ ガソリン（シエラ）</label>
+        <input type="number" class="form-input" id="kk_gas_sierra" placeholder="0" oninput="updateKakeiboUtilityTotal()">
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">⛽ ガソリン（プロボックス）</label>
+        <input type="number" class="form-input" id="kk_gas_probox" placeholder="0" oninput="updateKakeiboUtilityTotal()">
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">📈 楽天証券</label>
+        <input type="number" class="form-input" id="kk_rakuten" placeholder="0" oninput="updateKakeiboUtilityTotal()">
+      </div>
+    </div>
+
+    <div style="background:#E8F5E9;border-radius:10px;padding:10px 14px;margin-bottom:12px;display:flex;justify-content:space-between;font-weight:700;color:#2E7D32">
+      <span>💡 固定費合計</span><span id="kk_utility_total">¥0</span>
+    </div>
+
+    <button class="btn-primary" onclick="saveKakeiboUtility()" style="background:linear-gradient(135deg,#1565C0,#42A5F5)">💾 公共料金を保存する</button>
+  </div>
+
+  <!-- 履歴 -->
+  <div class="card" style="padding:16px 20px">
+    <div class="card-title">📊 入力履歴</div>
+    <div id="kakeiboHistory"></div>
+  </div>
+
+</div>
 <div class="modal-overlay" id="incomeModalOverlay" onclick="handleIncomeModalClick(event)">
   <div class="modal" id="incomeModalContent">
     <div class="modal-handle"></div>
@@ -1437,7 +1608,10 @@ function getMonthIncome(year, month) {
 // ===== FIXED EXPENSE DATA (from 毎月かかる sheet) =====
 const FIXED_DATA = {"2025-01":{"住居費":51827,"電気代":11830,"ガス代":10685,"玉島テレビ":3080,"携帯_トオル":3655,"携帯_ひとみ":4284,"ガソリン_シエラ":6260,"楽天証券":33333},"2025-02":{"住居費":51827,"電気代":14233,"ガス代":11547,"水道代":9497,"玉島テレビ":3080,"携帯_トオル":2643,"携帯_ひとみ":4284,"ガソリン_シエラ":23151,"楽天証券":33333},"2025-03":{"住居費":51827,"電気代":14264,"ガス代":11072,"玉島テレビ":3080,"携帯_トオル":2643,"携帯_ひとみ":6887,"ガソリン_シエラ":15021,"楽天証券":33333},"2025-04":{"住居費":51827,"電気代":11082,"ガス代":12903,"水道代":10191,"玉島テレビ":14366,"携帯_トオル":2643,"携帯_ひとみ":6887,"ガソリン_シエラ":11882,"楽天証券":33333},"2025-05":{"住居費":51827,"電気代":11706,"ガス代":11952,"玉島テレビ":3080,"携帯_トオル":2643,"携帯_ひとみ":6887,"ガソリン_シエラ":15709,"楽天証券":33333},"2025-06":{"住居費":51827,"電気代":10146,"ガス代":8151,"水道代":10191,"玉島テレビ":3080,"携帯_トオル":2643,"携帯_ひとみ":6887,"ガソリン_シエラ":5146,"楽天証券":33333},"2025-07":{"住居費":51827,"電気代":8421,"ガス代":7333,"玉島テレビ":3080,"携帯_トオル":2643,"携帯_ひとみ":6888,"ガソリン_シエラ":9635,"楽天証券":33333},"2025-08":{"住居費":51827,"電気代":11298,"ガス代":4953,"水道代":7431,"玉島テレビ":3080,"携帯_トオル":2721,"携帯_ひとみ":6888,"ガソリン_シエラ":9165,"ガソリン_プロボックス":4424,"楽天証券":33333},"2025-09":{"住居費":51827,"電気代":19608,"ガス代":4475,"玉島テレビ":3080,"携帯_トオル":3546,"携帯_ひとみ":10489,"ガソリン_シエラ":10444,"ガソリン_プロボックス":5321,"楽天証券":33333},"2025-10":{"住居費":51827,"電気代":23235,"ガス代":6479,"水道代":9318,"玉島テレビ":14366,"携帯_トオル":2644,"携帯_ひとみ":3029,"ガソリン_シエラ":10123,"ガソリン_プロボックス":4424,"楽天証券":33333},"2025-11":{"住居費":51827,"電気代":16804,"ガス代":8956,"玉島テレビ":3080,"携帯_トオル":3260,"携帯_ひとみ":2975,"ガソリン_シエラ":5282,"ガソリン_プロボックス":10200,"楽天証券":33333},"2025-12":{"住居費":51827,"電気代":9697,"ガス代":8837,"水道代":10774,"玉島テレビ":3080,"携帯_トオル":3128,"楽天証券":33333},"2026-01":{"住居費":51827,"電気代":10917,"ガス代":13428,"玉島テレビ":3080,"携帯_トオル":2864,"ガソリン_シエラ":10793,"ガソリン_プロボックス":4690},"2026-02":{"住居費":51827,"電気代":12590,"ガス代":15606,"水道代":10191,"玉島テレビ":3080,"携帯_トオル":3218,"ガソリン_シエラ":6243,"ガソリン_プロボックス":4830},"2026-03":{"住居費":51827,"玉島テレビ":3080},"2026-04":{"住居費":51827,"玉島テレビ":14366},"2026-05":{"住居費":51827,"玉島テレビ":3080},"2026-06":{"住居費":51827,"玉島テレビ":3080},"2026-07":{"住居費":51827,"玉島テレビ":3080},"2026-08":{"住居費":51827,"玉島テレビ":3080},"2026-09":{"住居費":51827,"玉島テレビ":3080},"2026-10":{"住居費":51827,"玉島テレビ":14366},"2026-11":{"住居費":51827,"玉島テレビ":3080},"2026-12":{"住居費":51827,"玉島テレビ":3080}};
 
-function getMonthFixed(year, month) { return FIXED_DATA[getIncomeKey(year, month)] || {}; }
+function getMonthFixed(year, month) {
+  const key = getIncomeKey(year, month);
+  return fixedUserData[key] || FIXED_DATA[key] || {};
+}
 function getFixedUtility(year, month) {
   const f = getMonthFixed(year, month);
   return (f['電気代']||0) + (f['ガス代']||0) + (f['水道代']||0);
@@ -1553,6 +1727,7 @@ function renderPage(name) {
   else if (name === 'camp') renderCamp();
   else if (name === 'annual') renderAnnual();
   else if (name === 'card') renderCard();
+  else if (name === 'kakeibo') renderKakeibo();
 }
 
 // ===== HOME =====
@@ -2764,7 +2939,246 @@ function importCsvData(rows) {
   showToast(`✅ ${imported}件インポート完了`);
 }
 
-// ===== CSV EXPORT =====
+// ===== 家計管理ページ =====
+let kakeiboYear  = currentYear;
+let kakeiboMonth = currentMonth;
+
+// User-editable fixed data (overrides FIXED_DATA)
+const FIXED_USER_KEY = 'kakeibo_fixed_user_v1';
+let fixedUserData = {};
+
+function loadFixedUserData() {
+  try {
+    const saved = localStorage.getItem(FIXED_USER_KEY);
+    fixedUserData = saved ? JSON.parse(saved) : {};
+  } catch(e) { fixedUserData = {}; }
+}
+function saveFixedUserData() {
+  try { localStorage.setItem(FIXED_USER_KEY, JSON.stringify(fixedUserData)); } catch(e) {}
+  debouncedSave();
+}
+function getMonthFixedAll(year, month) {
+  const key = getIncomeKey(year, month);
+  return fixedUserData[key] || FIXED_DATA[key] || {};
+}
+
+function changeKakeiboMonth(delta) {
+  kakeiboMonth += delta;
+  if (kakeiboMonth > 12) { kakeiboMonth = 1; kakeiboYear++; }
+  if (kakeiboMonth < 1)  { kakeiboMonth = 12; kakeiboYear--; }
+  renderKakeibo();
+}
+
+function renderKakeibo() {
+  document.getElementById('kakeiboMonthLabel').textContent =
+    `${kakeiboYear}年${kakeiboMonth}月`;
+
+  // 給料データ読み込み
+  const key = getIncomeKey(kakeiboYear, kakeiboMonth);
+  const inc = incomeUserData[key] || INCOME_DATA[key] || {};
+  const td  = inc.toru_detail   || {};
+  const hd  = inc.hitomi_detail || {};
+  const isExcel = !incomeUserData[key] && !!INCOME_DATA[key];
+
+  document.getElementById('kk_toru_base').value       = td.base       || (isExcel ? inc.toru || '' : '');
+  document.getElementById('kk_toru_overtime').value   = td.overtime   || '';
+  document.getElementById('kk_toru_holiday').value    = td.holiday    || '';
+  document.getElementById('kk_toru_bonus').value      = td.bonus      || '';
+  document.getElementById('kk_toru_other').value      = td.other      || '';
+  document.getElementById('kk_toru_deduction').value  = td.deduction  || '';
+  document.getElementById('kk_hitomi_base').value     = hd.base       || (isExcel ? inc.hitomi || '' : '');
+  document.getElementById('kk_hitomi_overtime').value = hd.overtime   || '';
+  document.getElementById('kk_hitomi_holiday').value  = hd.holiday    || '';
+  document.getElementById('kk_hitomi_bonus').value    = hd.bonus      || '';
+  document.getElementById('kk_hitomi_other').value    = hd.other      || '';
+  document.getElementById('kk_hitomi_deduction').value= hd.deduction  || '';
+
+  // 公共料金読み込み
+  const f = getMonthFixedAll(kakeiboYear, kakeiboMonth);
+  document.getElementById('kk_housing').value       = f['住居費']              || '';
+  document.getElementById('kk_elec').value          = f['電気代']              || '';
+  document.getElementById('kk_gas').value           = f['ガス代']              || '';
+  document.getElementById('kk_water').value         = f['水道代']              || '';
+  document.getElementById('kk_tv').value            = f['玉島テレビ']          || '';
+  document.getElementById('kk_mobile_toru').value   = f['携帯_トオル']        || '';
+  document.getElementById('kk_mobile_hitomi').value = f['携帯_ひとみ']        || '';
+  document.getElementById('kk_gas_sierra').value    = f['ガソリン_シエラ']    || '';
+  document.getElementById('kk_gas_probox').value    = f['ガソリン_プロボックス'] || '';
+  document.getElementById('kk_rakuten').value       = f['楽天証券']            || '';
+
+  updateKakeiboTotals();
+  updateKakeiboUtilityTotal();
+  renderKakeiboHistory();
+}
+
+function kkVal(id) { return parseInt(document.getElementById(id)?.value) || 0; }
+
+function updateKakeiboTotals() {
+  const toruNet   = (kkVal('kk_toru_base') + kkVal('kk_toru_overtime') + kkVal('kk_toru_holiday') + kkVal('kk_toru_bonus') + kkVal('kk_toru_other')) - kkVal('kk_toru_deduction');
+  const hitomiNet = (kkVal('kk_hitomi_base') + kkVal('kk_hitomi_overtime') + kkVal('kk_hitomi_holiday') + kkVal('kk_hitomi_bonus') + kkVal('kk_hitomi_other')) - kkVal('kk_hitomi_deduction');
+  document.getElementById('kk_toru_net').textContent   = fmt(Math.max(0, toruNet));
+  document.getElementById('kk_hitomi_net').textContent = fmt(Math.max(0, hitomiNet));
+  document.getElementById('kk_family_net').textContent = fmt(Math.max(0, toruNet) + Math.max(0, hitomiNet));
+}
+
+function updateKakeiboUtilityTotal() {
+  const total = kkVal('kk_housing') + kkVal('kk_elec') + kkVal('kk_gas') + kkVal('kk_water') +
+    kkVal('kk_tv') + kkVal('kk_mobile_toru') + kkVal('kk_mobile_hitomi') +
+    kkVal('kk_gas_sierra') + kkVal('kk_gas_probox') + kkVal('kk_rakuten');
+  document.getElementById('kk_utility_total').textContent = fmt(total);
+}
+
+function saveKakeiboIncome() {
+  const key = getIncomeKey(kakeiboYear, kakeiboMonth);
+  const toruDetail   = { base: kkVal('kk_toru_base'), overtime: kkVal('kk_toru_overtime'), holiday: kkVal('kk_toru_holiday'), bonus: kkVal('kk_toru_bonus'), other: kkVal('kk_toru_other'), deduction: kkVal('kk_toru_deduction') };
+  const hitomiDetail = { base: kkVal('kk_hitomi_base'), overtime: kkVal('kk_hitomi_overtime'), holiday: kkVal('kk_hitomi_holiday'), bonus: kkVal('kk_hitomi_bonus'), other: kkVal('kk_hitomi_other'), deduction: kkVal('kk_hitomi_deduction') };
+  const toruNet   = (toruDetail.base + toruDetail.overtime + toruDetail.holiday + toruDetail.bonus + toruDetail.other) - toruDetail.deduction;
+  const hitomiNet = (hitomiDetail.base + hitomiDetail.overtime + hitomiDetail.holiday + hitomiDetail.bonus + hitomiDetail.other) - hitomiDetail.deduction;
+  const existing  = incomeUserData[key] || {};
+  incomeUserData[key] = {
+    ...existing,
+    toru: Math.max(0, toruNet), hitomi: Math.max(0, hitomiNet),
+    total: Math.max(0, toruNet) + Math.max(0, hitomiNet),
+    salary_total: Math.max(0, toruNet) + Math.max(0, hitomiNet),
+    toru_detail: toruDetail, hitomi_detail: hitomiDetail,
+  };
+  saveIncomeToStorage();
+  showToast('💰 給料明細を保存しました');
+  renderKakeiboHistory();
+}
+
+function saveKakeiboUtility() {
+  const key = getIncomeKey(kakeiboYear, kakeiboMonth);
+  fixedUserData[key] = {
+    '住居費':              kkVal('kk_housing'),
+    '電気代':              kkVal('kk_elec'),
+    'ガス代':              kkVal('kk_gas'),
+    '水道代':              kkVal('kk_water'),
+    '玉島テレビ':          kkVal('kk_tv'),
+    '携帯_トオル':        kkVal('kk_mobile_toru'),
+    '携帯_ひとみ':        kkVal('kk_mobile_hitomi'),
+    'ガソリン_シエラ':    kkVal('kk_gas_sierra'),
+    'ガソリン_プロボックス': kkVal('kk_gas_probox'),
+    '楽天証券':            kkVal('kk_rakuten'),
+  };
+  // Remove zero values
+  Object.keys(fixedUserData[key]).forEach(k => { if (!fixedUserData[key][k]) delete fixedUserData[key][k]; });
+  saveFixedUserData();
+  showToast('💡 公共料金を保存しました');
+  renderKakeiboHistory();
+}
+
+function renderKakeiboHistory() {
+  // Show last 6 months
+  const rows = [];
+  for (let i = 0; i < 6; i++) {
+    let y = kakeiboYear, m = kakeiboMonth - i;
+    while (m < 1) { m += 12; y--; }
+    const key = getIncomeKey(y, m);
+    const inc = incomeUserData[key] || INCOME_DATA[key] || null;
+    const fix = getMonthFixedAll(y, m);
+    const utility = (fix['電気代']||0) + (fix['ガス代']||0) + (fix['水道代']||0);
+    const housing = fix['住居費'] || 0;
+    rows.push({ label: `${y}年${m}月`, inc, utility, housing, hasUserInc: !!incomeUserData[key], hasUserFix: !!fixedUserData[key] });
+  }
+
+  document.getElementById('kakeiboHistory').innerHTML = rows.map(r => `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #F5F5F5;font-size:0.85rem">
+      <div style="font-weight:700;min-width:70px">${r.label}</div>
+      <div style="flex:1;padding:0 10px">
+        <div style="color:#43A047;font-weight:700">${r.inc ? '💰 ' + fmt(r.inc.total) : '<span style="color:#BDBDBD">収入未入力</span>'}
+          ${r.hasUserInc ? '<span style="font-size:0.65rem;background:#E8F5E9;color:#2E7D32;padding:1px 5px;border-radius:8px;margin-left:4px">✏️入力済</span>' : '<span style="font-size:0.65rem;background:#F5F5F5;color:#9E9E9E;padding:1px 5px;border-radius:8px;margin-left:4px">Excel</span>'}</div>
+        <div style="color:#1565C0;font-size:0.78rem;margin-top:2px">${r.utility ? '💡 光熱費 ' + fmt(r.utility) : ''} ${r.housing ? '🏠 ' + fmt(r.housing) : ''}
+          ${r.hasUserFix ? '<span style="font-size:0.65rem;background:#E3F2FD;color:#1565C0;padding:1px 5px;border-radius:8px;margin-left:4px">✏️入力済</span>' : ''}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// Override getMonthFixed to also check fixedUserData
+
+function exportExcel(type) {
+  const wb = XLSX.utils.book_new();
+
+  if (type === 'transactions' || type === 'all') {
+    const rows = [['日付','カテゴリ','購入先','用途','金額','支払方法','照合','購入者','メモ','支出タイプ']];
+    transactions.forEach(t => rows.push([
+      t.date, getCatConf(t.category).label, t.shop, t.purpose,
+      t.amount, t.payment, t.confirm, t.buyer === 'TORU' ? 'トオル' : 'ひとみ',
+      t.memo, t.txType === 'fixed' ? '固定費' : t.txType === 'yearly' ? '年払い' : '通常'
+    ]));
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [10,10,16,12,10,14,8,8,20,8].map(w => ({wch:w}));
+    XLSX.utils.book_append_sheet(wb, ws, '支出明細');
+    if (type === 'transactions') { XLSX.writeFile(wb, `支出明細_${currentYear}年.xlsx`); showToast('📊 支出明細をダウンロードしました'); return; }
+  }
+
+  if (type === 'income' || type === 'all') {
+    const rows = [['年月','トオル手取り','ひとみ手取り','世帯合計','その他収入','総収入','備考']];
+    // Combine INCOME_DATA and incomeUserData
+    const allKeys = [...new Set([...Object.keys(INCOME_DATA), ...Object.keys(incomeUserData)])].sort();
+    allKeys.forEach(key => {
+      const d = incomeUserData[key] || INCOME_DATA[key] || {};
+      rows.push([
+        key, d.toru || 0, d.hitomi || 0,
+        d.salary_total || d.total || 0,
+        d.extra || 0,
+        d.total || 0,
+        d.extra_detail?.memo || ''
+      ]);
+    });
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [10,14,14,14,12,12,20].map(w => ({wch:w}));
+    XLSX.utils.book_append_sheet(wb, ws, '給料・収入');
+    if (type === 'income') { XLSX.writeFile(wb, `収入データ_${currentYear}年.xlsx`); showToast('📊 収入データをダウンロードしました'); return; }
+  }
+
+  if (type === 'utility' || type === 'all') {
+    const rows = [['年月','住居費','電気代','ガス代','水道代','玉島テレビ','携帯_トオル','携帯_ひとみ','ガソリン_シエラ','ガソリン_プロボックス','楽天証券','合計']];
+    Object.entries(FIXED_DATA).sort().forEach(([key, d]) => {
+      const total = Object.values(d).reduce((s,v) => s+v, 0);
+      rows.push([
+        key,
+        d['住居費']||0, d['電気代']||0, d['ガス代']||0, d['水道代']||0,
+        d['玉島テレビ']||0, d['携帯_トオル']||0, d['携帯_ひとみ']||0,
+        d['ガソリン_シエラ']||0, d['ガソリン_プロボックス']||0,
+        d['楽天証券']||0, total
+      ]);
+    });
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [10,10,10,10,10,12,12,12,14,16,10,10].map(w => ({wch:w}));
+    XLSX.utils.book_append_sheet(wb, ws, '公共料金');
+    if (type === 'utility') { XLSX.writeFile(wb, `公共料金_${currentYear}年.xlsx`); showToast('📊 公共料金データをダウンロードしました'); return; }
+  }
+
+  if (type === 'cards' || type === 'all') {
+    const rows = [['年月', ...ALL_CARDS, '合計']];
+    Object.entries(cardData).sort().forEach(([key, d]) => {
+      const total = ALL_CARDS.reduce((s,c) => s+(d[c]||0), 0);
+      rows.push([key, ...ALL_CARDS.map(c => d[c]||0), total]);
+    });
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [10, ...ALL_CARDS.map(() => 14), 12].map(w => ({wch:w}));
+    XLSX.utils.book_append_sheet(wb, ws, 'カード引落し');
+    if (type === 'cards') { XLSX.writeFile(wb, `カードデータ_${currentYear}年.xlsx`); showToast('📊 カードデータをダウンロードしました'); return; }
+  }
+
+  if (type === 'bank' || type === 'all') {
+    const rows = [['年月', ...BANK_ACCOUNTS.map(a => a.name)]];
+    Object.entries(bankData).sort().forEach(([key, d]) => {
+      rows.push([key, ...BANK_ACCOUNTS.map(a => d[a.id]||0)]);
+    });
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [10, ...BANK_ACCOUNTS.map(() => 16)].map(w => ({wch:w}));
+    XLSX.utils.book_append_sheet(wb, ws, '銀行口座');
+    if (type === 'bank') { XLSX.writeFile(wb, `銀行口座_${currentYear}年.xlsx`); showToast('📊 銀行口座データをダウンロードしました'); return; }
+  }
+
+  if (type === 'all') {
+    XLSX.writeFile(wb, `家計簿データ_全シート_${currentYear}年.xlsx`);
+    showToast('📊 全データをExcelでダウンロードしました');
+  }
+}
 function exportCSV(type) {
   let csv = '', filename = '';
   if (type === 'transactions') {
@@ -3241,6 +3655,7 @@ async function loadFromSheets() {
     if (data.incomeUserData) { incomeUserData  = data.incomeUserData; saveLocalCache('kakeibo_income_v1', incomeUserData); }
     if (data.purposeMaster)  { purposeMaster   = data.purposeMaster;  saveLocalCache('kakeibo_purpose_master_v1', purposeMaster); }
     if (data.shopMaster)     { shopMaster      = data.shopMaster;     saveLocalCache('kakeibo_shop_master_v1', shopMaster); }
+    if (data.fixedUserData)  { fixedUserData   = data.fixedUserData;  saveLocalCache('kakeibo_fixed_user_v1', fixedUserData); }
     const t = new Date().toLocaleTimeString('ja-JP', {hour:'2-digit', minute:'2-digit'});
     setSyncStatus('ok', '同期済み ' + t);
     return true;
@@ -3253,7 +3668,7 @@ async function loadFromSheets() {
 
 async function saveToSheets() {
   setSyncStatus('saving', 'クラウドに保存中…');
-  const data = { transactions, cardData, bankData, incomeUserData, purposeMaster, shopMaster };
+  const data = { transactions, cardData, bankData, incomeUserData, purposeMaster, shopMaster, fixedUserData };
   try {
     const res = await fetch(FB_URL, {
       method: 'PUT',
@@ -3290,6 +3705,7 @@ loadData();
 loadCardData();
 loadBankData();
 loadIncomeUserData();
+loadFixedUserData();
 
 // Wire income input live totals
 document.querySelectorAll('.income-input').forEach(el => el.addEventListener('input', updateIncomeTotals));
